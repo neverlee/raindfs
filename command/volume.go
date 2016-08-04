@@ -14,13 +14,13 @@ import (
 )
 
 type volumeServerOption struct {
-	port                  int
 	ip                    string
+	port                  int
 	master                string
+	data                  string
 	pulseSeconds          int
 	idleConnectionTimeout int
 	maxCpu                int
-	readRedirect          bool
 }
 
 var vsopt volumeServerOption
@@ -28,8 +28,10 @@ var vsopt volumeServerOption
 func init() {
 	cmdVolume.Run = runVolume // break init cycle
 	vsopt = volumeServerOption{
-		port:                  *cmdVolume.Flag.Int("port", 8080, "http listen port"),
 		ip:                    *cmdVolume.Flag.String("ip", "0.0.0.0", "ip or server name"),
+		port:                  *cmdVolume.Flag.Int("port", 8080, "http listen port"),
+		master:                *cmdVolume.Flag.String("master", "127.0.0.1:10000", "master host"),
+		data:                  *cmdVolume.Flag.String("-dir", "./data", "data dir"),
 		pulseSeconds:          *cmdVolume.Flag.Int("pulseseconds", 5, "number of seconds between heartbeats, must be smaller than or equal to the master's setting"),
 		idleConnectionTimeout: *cmdVolume.Flag.Int("idletimeout", 10, "connection idle seconds"),
 		maxCpu:                *cmdVolume.Flag.Int("maxcpu", 0, "maximum number of CPUs. 0 means all available CPUs"),
@@ -51,7 +53,7 @@ func runVolume(cmd *Command, args []string) bool {
 
 	router := mux.NewRouter()
 
-	volumeServer := server.NewVolumeServer(router, vsopt.pulseSeconds)
+	volumeServer := server.NewVolumeServer(vsopt.ip, vsopt.port, vsopt.data, router, vsopt.pulseSeconds)
 
 	listeningAddress := vsopt.ip + ":" + strconv.Itoa(vsopt.port)
 	glog.V(0).Infoln("Start Seaweed volume server", util.VERSION, "at", listeningAddress)

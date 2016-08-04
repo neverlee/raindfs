@@ -1,6 +1,11 @@
 package server
 
 import (
+	"fmt"
+	"net/http"
+
+	"raindfs/operation"
+
 	"github.com/gorilla/mux"
 )
 
@@ -40,8 +45,20 @@ func NewMasterServer(r *mux.Router, port int, metaFolder string, pulseSeconds in
 	//r.HandleFunc("/delete", ms.deleteFromMasterServerHandler)
 	//r.HandleFunc("/{fileId}",   ms.proxyToLeader(ms.redirectHandler))
 
+	r.HandleFunc("/cluster/status", ms.clusterStatusHandler)
+
 	r.HandleFunc("/stats/counter", statsCounterHandler)
 	r.HandleFunc("/stats/memory", statsMemoryHandler)
 
 	return ms
+}
+
+func (m *MasterServer) clusterStatusHandler(w http.ResponseWriter, r *http.Request) {
+	hi := fmt.Sprintf("127.0.0.1:%d", m.port)
+	ret := operation.ClusterStatusResult{
+		Leader:   hi,
+		LeaderId: 0,
+		Clusters: []string{hi},
+	}
+	writeJsonQuiet(w, r, http.StatusOK, ret)
 }

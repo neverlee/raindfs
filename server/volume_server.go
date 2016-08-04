@@ -3,6 +3,8 @@ package server
 import (
 	"sync"
 
+	"raindfs/storage"
+
 	"github.com/gorilla/mux"
 	"github.com/neverlee/glog"
 )
@@ -11,14 +13,14 @@ type VolumeServer struct {
 	masterNode   string
 	mnLock       sync.RWMutex
 	pulseSeconds int
-	//store        *storage.Store
+	store        *storage.Store
 }
 
-func NewVolumeServer(r *mux.Router, pulseSeconds int) *VolumeServer {
+func NewVolumeServer(ip string, port int, data string, r *mux.Router, pulseSeconds int) *VolumeServer {
 	vs := &VolumeServer{
 		pulseSeconds: pulseSeconds,
 	}
-	//vs.store = storage.NewStore(port, ip, publicUrl, folders, maxCounts, vs.needleMapKind)
+	vs.store = storage.NewStore(ip, port, data)
 
 	//adminMux.HandleFunc("/ui/index.html", vs.uiStatusHandler)
 	//adminMux.HandleFunc("/status", (vs.statusHandler))
@@ -36,7 +38,6 @@ func NewVolumeServer(r *mux.Router, pulseSeconds int) *VolumeServer {
 	//adminMux.HandleFunc("/delete", (vs.batchDeleteHandler))
 	//adminMux.HandleFunc("/", vs.privateStoreHandler)
 	// separated admin and public port
-	//publicMux.HandleFunc("/favicon.ico", vs.faviconHandler)
 	//publicMux.HandleFunc("/", vs.publicReadOnlyHandler)
 
 	return vs
