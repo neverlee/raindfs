@@ -72,7 +72,7 @@ func runMaster(cmd *Command, args []string) bool {
 	}
 
 	router := mux.NewRouter()
-	ms := server.NewMasterServer(router, msopt.port, msopt.metaFolder, msopt.pulse)
+	_ = server.NewMasterServer(router, msopt.port, msopt.metaFolder, msopt.pulse)
 
 	listeningAddress := msopt.ip + ":" + strconv.Itoa(msopt.port)
 

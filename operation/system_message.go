@@ -14,7 +14,6 @@ type JoinMessage struct {
 	Ip             string                      `json:"ip,omitempty"`
 	Port           uint32                      `json:"port,omitempty"`
 	MaxVolumeCount uint32                      `json:"max_volume_count,omitempty"`
-	MaxFileKey     uint64                      `json:"max_file_key,omitempty"`
 	Volumes        []*VolumeInformationMessage `json:"volumes,omitempty"`
 }
 

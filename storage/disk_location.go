@@ -1,34 +1,47 @@
 package storage
 
 import (
+	"errors"
 	"io/ioutil"
 	"strings"
+	"sync"
 
 	"github.com/neverlee/glog"
 )
 
+var (
+	ErrExistVolume = errors.New("Volune was already exist!")
+)
+
 type DiskLocation struct {
-	Directory string
+	directory string
 	volumes   map[VolumeId]*Volume
+	mutex     sync.Mutex
 }
 
 func NewDiskLocation(dir string) *DiskLocation {
-	location := &DiskLocation{Directory: dir}
+	location := &DiskLocation{directory: dir}
 	location.volumes = make(map[VolumeId]*Volume)
 	return location
 }
 
+func (l *DiskLocation) Directory() string {
+	return l.directory
+}
+
 func (l *DiskLocation) loadExistingVolumes() {
-	if dirs, err := ioutil.ReadDir(l.Directory); err == nil {
+	l.mutex.Lock()
+	l.mutex.Unlock()
+	if dirs, err := ioutil.ReadDir(l.directory); err == nil {
 		for _, dir := range dirs {
 			name := dir.Name()
 			if dir.IsDir() && strings.HasSuffix(name, ".vol") {
 				base := name[:len(name)-len(".vol")]
 				if vid, err := NewVolumeId(base); err == nil {
 					if l.volumes[vid] == nil {
-						if v, e := NewVolume(l.Directory, vid); e == nil {
+						if v, e := NewVolume(l.directory, vid); e == nil {
 							l.volumes[vid] = v
-							glog.V(0).Infof("data file %s, v=%d", l.Directory+"/"+name)
+							glog.V(0).Infof("volume directory %s", l.directory+"/"+name)
 						} else {
 							glog.V(0).Infof("new volume %s error %s", name, e)
 						}
@@ -37,14 +50,62 @@ func (l *DiskLocation) loadExistingVolumes() {
 			}
 		}
 	}
-	glog.V(0).Infoln("Store started on dir:", l.Directory, "with", len(l.volumes), "volumes")
+	glog.V(0).Infoln("Store started on dir:", l.directory, "with", len(l.volumes), "volumes")
 }
 
-func (l *DiskLocation) DeleteVolumeById(vid VolumeId) {
+func (l *DiskLocation) GetVolume(vid VolumeId) *Volume {
+	l.mutex.Lock()
+	l.mutex.Unlock()
+	if v, ok := l.volumes[vid]; ok {
+		return v
+	}
+	return nil
+}
+
+func (l *DiskLocation) AddVolume(vid VolumeId) error {
+	l.mutex.Lock()
+	l.mutex.Unlock()
+	if _, ok := l.volumes[vid]; ok {
+		return ErrExistVolume
+	}
+	v, err := NewVolume(l.directory, vid)
+	if err == nil {
+		l.volumes[vid] = v
+	}
+	return err
+}
+
+func (l *DiskLocation) DeleteVolume(vid VolumeId) {
+	l.mutex.Lock()
+	l.mutex.Unlock()
 	v, ok := l.volumes[vid]
 	if !ok {
 		return
 	}
 	v.Destroy()
 	delete(l.volumes, vid)
+}
+
+func (l *DiskLocation) PickWritableVolume() *Volume {
+	l.mutex.Lock()
+	l.mutex.Unlock()
+	for _, v := range l.volumes {
+		return v
+	}
+	return nil
+}
+
+func (l *DiskLocation) ToMap() []*VolumeInfo {
+	l.mutex.Lock()
+	l.mutex.Unlock()
+	stats := make([]*VolumeInfo, len(l.volumes))
+	i := 0
+	for _, v := range l.volumes {
+		s := &v.Info
+		//&VolumeInfo //Size:   //FileCount:  //DeleteCount: //DeletedByteCount:
+		stats[i] = s
+		i++
+	}
+	sortVolumeInfos(stats)
+	return stats
 }

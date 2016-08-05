@@ -1,12 +1,20 @@
 package storage
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path"
+	"strconv"
 	"sync"
+
+	"raindfs/util"
+
+	"github.com/satori/go.uuid"
 )
 
 const (
@@ -15,8 +23,7 @@ const (
 )
 
 type VolumeMeta struct {
-	LastModifiedTime uint64     `json:"modtime"`
-	LastFileId       uint64     `json:"maxfid"`
+	LastModifiedTime uint64     `json:"ModTime"`
 	Info             VolumeInfo `json:"Info"`
 }
 
@@ -45,12 +52,16 @@ type Volume struct {
 }
 
 func NewVolume(dirname string, id VolumeId) (*Volume, error) {
-	v := &Volume{dir: dirname, Id: id}
-	if err := os.MkdirAll(v.PathName(), 0755); os.IsExist(err) {
-		return v, v.load(v.MetaFilePath())
+	v := &Volume{
+		Id:  id,
+		dir: path.Join(dirname, id.String()) + VolumeExtension,
+	}
+	if err := os.MkdirAll(v.dir, 0755); os.IsExist(err) {
+		return v, v.load(v.MetaPath())
 	} else if err != nil {
 		return nil, err
 	}
+	v.dump(v.MetaPath())
 	return v, nil
 }
 
@@ -58,30 +69,69 @@ func (v *Volume) String() string {
 	return fmt.Sprintf("Id:%v, dir:%s", v.Id, v.dir)
 }
 
-func (v *Volume) PathName() string {
-	return path.Join(v.dir, v.Id.String()) + VolumeExtension
-}
-
-func (v *Volume) MetaFilePath() string {
-	return path.Join(path.Join(v.dir, v.Id.String())+VolumeExtension, MetaName)
+func (v *Volume) MetaPath() string {
+	return path.Join(v.dir, MetaName)
 }
 
 func (v *Volume) Destroy() {
 	v.dataFileAccessLock.Lock()
 	defer v.dataFileAccessLock.Unlock()
 	// TODO: first remove then async delete, 保证不出错
-	_ = os.RemoveAll(v.PathName())
+	_ = os.RemoveAll(v.dir)
 }
 
 func (v *Volume) Sync() error {
 	v.dataFileAccessLock.Lock()
 	defer v.dataFileAccessLock.Unlock()
-	return v.dump(v.MetaFilePath())
+	return v.dump(v.MetaPath())
 }
 
 // Close cleanly shuts down this volume
 func (v *Volume) Close() {
 	v.dataFileAccessLock.Lock()
 	defer v.dataFileAccessLock.Unlock()
-	v.dump(v.MetaFilePath())
+	v.dump(v.MetaPath())
+}
+
+func (v *Volume) GenFileId() *FileId {
+	key := binary.LittleEndian.Uint64(uuid.NewV4().Bytes())
+	return NewFileId(v.Id, key)
+}
+
+func (v *Volume) SaveFile(fid *FileId, r io.Reader) error {
+	fidstr := strconv.FormatUint(fid.Key, 16)
+	fpath := path.Join(v.dir, fidstr)
+	file, err := os.Create(fpath)
+	defer file.Close()
+	if err != nil {
+		return err
+	}
+
+	_, err = io.Copy(file, r)
+	return err
+}
+
+func (v *Volume) LoadFile(fid *FileId, w http.ResponseWriter) error {
+	fidstr := strconv.FormatUint(fid.Key, 16)
+	fpath := path.Join(v.dir, fidstr)
+	file, err := os.Open(fpath)
+	defer file.Close()
+	if err != nil {
+		return err
+	}
+	if fsize, err := util.GetFileSize(file); err == nil {
+		w.Header().Set("Content-length", strconv.FormatInt(fsize, 10))
+	} else {
+		return err
+	}
+
+	_, err = io.Copy(w, file)
+
+	return err
+}
+
+func (v *Volume) DeleteFile(fid *FileId) {
+	fidstr := strconv.FormatUint(fid.Key, 16)
+	fpath := path.Join(v.dir, fidstr)
+	os.Remove(fpath) // TOTO async delete, no errro
 }

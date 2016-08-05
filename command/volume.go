@@ -29,7 +29,7 @@ func init() {
 	cmdVolume.Run = runVolume // break init cycle
 	vsopt = volumeServerOption{
 		ip:                    *cmdVolume.Flag.String("ip", "0.0.0.0", "ip or server name"),
-		port:                  *cmdVolume.Flag.Int("port", 8080, "http listen port"),
+		port:                  *cmdVolume.Flag.Int("port", 20000, "http listen port"),
 		master:                *cmdVolume.Flag.String("master", "127.0.0.1:10000", "master host"),
 		data:                  *cmdVolume.Flag.String("-dir", "./data", "data dir"),
 		pulseSeconds:          *cmdVolume.Flag.Int("pulseseconds", 5, "number of seconds between heartbeats, must be smaller than or equal to the master's setting"),
@@ -52,6 +52,10 @@ func runVolume(cmd *Command, args []string) bool {
 	}
 
 	router := mux.NewRouter()
+
+	if err := util.MkdirOrExist(vsopt.data); err != nil {
+		glog.Fatalf("Check data Folder (-dir) Writable %s : %s", vsopt.data, err)
+	}
 
 	volumeServer := server.NewVolumeServer(vsopt.ip, vsopt.port, vsopt.data, router, vsopt.pulseSeconds)
 

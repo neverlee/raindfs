@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"strings"
 
 	"raindfs/operation"
 	"raindfs/util"
@@ -89,39 +88,8 @@ func NewStore(ip string, port int, dirname string) (s *Store) {
 	return
 }
 
-func (s *Store) findVolume(vid VolumeId) *Volume {
-	if v, found := s.Location.volumes[vid]; found {
-		return v
-	}
-	return nil
-}
-
-func (s *Store) addVolume(vid VolumeId) error {
-	if s.findVolume(vid) != nil {
-		return fmt.Errorf("Volume Id %d already exists!", vid)
-	}
-	volume, err := NewVolume(s.Location.Directory, vid)
-	if err == nil {
-		s.Location.volumes[vid] = volume
-		return nil
-	}
-	return err
-}
-
 func (s *Store) Status() []*VolumeInfo {
-	var stats []*VolumeInfo
-	for k, v := range s.Location.volumes {
-		s := &VolumeInfo{
-			Id: VolumeId(k),
-			//Size:             v.ContentSize(),
-			//FileCount:        v.FileCount(),
-			//DeleteCount:      v.DeletedCount(),
-			//DeletedByteCount: v.DeletedSize()
-		}
-		stats = append(stats, s)
-	}
-	sortVolumeInfos(stats)
-	return stats
+	return s.Location.ToMap()
 }
 
 func (s *Store) SendHeartbeatToMaster() (masterNode string, e error) {
@@ -131,15 +99,13 @@ func (s *Store) SendHeartbeatToMaster() (masterNode string, e error) {
 	}
 	var volumeMessages []*operation.VolumeInformationMessage
 	maxVolumeCount := 0
-	var maxFileKey uint64
-	for k, v := range s.Location.volumes {
-		//if maxFileKey < v.nm.MaxFileKey() { maxFileKey = v.nm.MaxFileKey() }
+	for k, _ := range s.Location.volumes {
 		volumeMessage := &operation.VolumeInformationMessage{
-			Id: (uint32(k)),
-			//Size:             (uint64(v.Size())),
-			//FileCount:        (uint64(v.nm.FileCount())),
-			//DeleteCount:      (uint64(v.nm.DeletedCount())),
-			//DeletedByteCount: (v.nm.DeletedSize()),
+			Id: uint32(k),
+			//Size:             uint64(v.Size()),
+			//FileCount:        uint64(v.FileCount()),
+			//DeleteCount:      uint64(v.DeletedCount()),
+			//DeletedByteCount: v.DeletedSize(),
 		}
 		volumeMessages = append(volumeMessages, volumeMessage)
 	}
@@ -149,7 +115,6 @@ func (s *Store) SendHeartbeatToMaster() (masterNode string, e error) {
 		Ip:             s.Ip,
 		Port:           uint32(s.Port),
 		MaxVolumeCount: uint32(maxVolumeCount),
-		MaxFileKey:     maxFileKey,
 		Volumes:        volumeMessages,
 	}
 
@@ -161,7 +126,7 @@ func (s *Store) SendHeartbeatToMaster() (masterNode string, e error) {
 	joinUrl := "http://" + masterNode + "/dir/join"
 	glog.V(4).Infof("Connecting to %s ...", joinUrl)
 
-	jsonBlob, err := util.PostBytes(joinUrl, data)
+	_, err = util.PostBytes(joinUrl, data)
 	if err != nil {
 		s.masterNodes.Reset()
 		return "", err
@@ -179,6 +144,7 @@ func (s *Store) SendHeartbeatToMaster() (masterNode string, e error) {
 	s.connected = true
 	return
 }
+
 func (s *Store) Close() {
 	for _, v := range s.Location.volumes {
 		v.Close()
@@ -187,12 +153,3 @@ func (s *Store) Close() {
 
 //func (s *Store) Write(i VolumeId, n *Needle) (size uint32, err error) { }
 //func (s *Store) Delete(i VolumeId, n *Needle) (uint32, error) { }
-
-func (s *Store) GetVolume(i VolumeId) *Volume {
-	return s.findVolume(i)
-}
-
-func (s *Store) HasVolume(i VolumeId) bool {
-	v := s.findVolume(i)
-	return v != nil
-}

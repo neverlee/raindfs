@@ -13,8 +13,9 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/neverlee/glog"
 	"raindfs/command"
+
+	"github.com/neverlee/glog"
 )
 
 var IsDebug *bool
@@ -163,8 +164,4 @@ func exit() {
 		f()
 	}
 	os.Exit(exitStatus)
-}
-
-func debug(params ...interface{}) {
-	glog.V(4).Infoln(params)
 }
