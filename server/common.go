@@ -6,9 +6,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/neverlee/glog"
 	"raindfs/stats"
 	"raindfs/util"
+
+	"github.com/neverlee/glog"
 )
 
 var serverStats *stats.ServerStats
