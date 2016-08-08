@@ -3,12 +3,17 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"path"
 
 	"raindfs/operation"
 	"raindfs/sequence"
 	"raindfs/topology"
 
 	"github.com/gorilla/mux"
+)
+
+const (
+	seqFileName = "seq.json"
 )
 
 type MasterServer struct {
@@ -32,7 +37,7 @@ func NewMasterServer(r *mux.Router, port int, metaFolder string, pulseSeconds in
 		pulseSeconds: pulseSeconds,
 		router:       r,
 	}
-	seq := sequence.NewMemorySequencer() // setMax
+	seq := sequence.NewSequencer(path.Join(metaFolder, seqFileName)) // setMax
 	ms.Topo = topology.NewTopology(seq, ms.pulseSeconds)
 
 	//r.HandleFunc("/", ms.uiStatusHandler) r.HandleFunc("/ui/index.html", ms.uiStatusHandler)

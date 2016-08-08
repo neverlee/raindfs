@@ -1,31 +1,29 @@
 package topology
 
 import (
-	"fmt"
-	"time"
-
 	"raindfs/sequence"
 	"raindfs/storage"
-
-	"github.com/neverlee/glog"
 )
 
 type Topology struct {
-	nodes        map[string]*DataNode
-	volumeLayout VolumeLayout
+	nodemap      *DataNodeMap
+	volumeLayout *VolumeLayout
 
 	pulse    int
-	Sequence sequence.Sequencer
+	Sequence *sequence.Sequencer
 
 	chanDeadDataNodes      chan *DataNode
 	chanRecoveredDataNodes chan *DataNode
 	chanFullVolumes        chan storage.VolumeInfo
 }
 
-func NewTopology(seq sequence.Sequencer, pulse int) *Topology {
+func NewTopology(seq *sequence.Sequencer, pulse int) *Topology {
 	t := &Topology{}
 	t.pulse = pulse
 	t.Sequence = seq
+
+	t.nodemap = NewDataNodeMap()
+	t.volumeLayout = NewVolumeLayout()
 
 	t.chanDeadDataNodes = make(chan *DataNode)
 	t.chanRecoveredDataNodes = make(chan *DataNode)
@@ -39,9 +37,8 @@ func (t *Topology) Lookup(vid storage.VolumeId) []*DataNode {
 }
 
 func (t *Topology) NextVolumeId() storage.VolumeId {
-	vid := t.GetMaxVolumeId()
-	next := vid.Next()
-	return next
+	_, r := t.Sequence.NextId(1)
+	return storage.VolumeId(r)
 }
 
 func (t *Topology) HasWritableVolume() bool {
@@ -63,7 +60,7 @@ func (t *Topology) HasWritableVolume() bool {
 //		t.UnRegisterDataNode(dn)
 //	}
 //	dn = t.GetOrCreateDataNode(joinMessage.Ip,
-//		int(joinMessage.Port), joinMessage.PublicUrl,
+//		int(joinMessage.Port),
 //		int(joinMessage.MaxVolumeCount))
 //	var volumeInfos []storage.VolumeInfo
 //	for _, v := range joinMessage.Volumes {
@@ -82,40 +79,10 @@ func (t *Topology) HasWritableVolume() bool {
 //	}
 //}
 
-func (t *Topology) FindDataNode(ip string, port int) *DataNode {
-	key := fmt.Sprintf("%s:%d", ip, port)
-	dn, _ := t.nodes[key]
-	return dn
-}
-
-func (t *Topology) GetOrCreateDataNode(ip string, port int, maxVolumeCount int) *DataNode {
-	for _, dn := range t.nodes {
-		if dn.MatchLocation(ip, port) {
-			dn.LastSeen = time.Now().Unix()
-			if dn.Dead {
-				dn.Dead = false
-				t.chanRecoveredDataNodes <- dn
-			}
-			return dn
-		}
-	}
-
-	dn := NewDataNode(ip, port, t)
-	dn.Ip = ip
-	dn.Port = port
-	dn.LastSeen = time.Now().Unix()
-	t.LinkChildNode(dn)
-	return dn
-}
-
 func (t *Topology) ToMap() interface{} {
 	m := make(map[string]interface{})
 	//m["Max"] = t.GetMaxVolumeCount()
-	var dcs []interface{}
-	for _, dn := range t.nodes {
-		dcs = append(dcs, dn.ToMap())
-	}
-	m["DataNodes"] = dcs
+	m["DataNodes"] = t.nodemap.ToMap()
 	//m["layouts"] = layouts
 	return m
 }
@@ -123,37 +90,23 @@ func (t *Topology) ToMap() interface{} {
 func (t *Topology) ToVolumeMap() interface{} {
 	m := make(map[string]interface{})
 	//m["Max"] = t.GetMaxVolumeCount()
-	dcs := make(map[string]interface{})
-	for _, dn := range t.nodes {
-		var volumes []interface{}
-		for _, v := range dn.GetVolumes() {
-			volumes = append(volumes, v)
-		}
-		dcs[dn.Url()] = volumes
-	}
-	m["DataNodes"] = dcs
+	//dcs := make(map[string]interface{})
+	//for _, dn := range t.nodes {
+	//	var volumes []interface{}
+	//	for _, v := range dn.GetVolumes() {
+	//		volumes = append(volumes, v)
+	//	}
+	//	dcs[dn.Url()] = volumes
+	//}
+	//m["DataNodes"] = dcs
 	return m
 }
 
 func (t *Topology) GetMaxVolumeId() storage.VolumeId {
-	_, r := t.Sequence.NextId(1)
+	r := t.Sequence.Peek()
 	return storage.VolumeId(r)
 }
 
 //func (t *Topology) GetVolumeCount() int
 //func (t *Topology) GetActiveVolumeCount() int
 //func (t *Topology) GetMaxVolumeCount() int
-
-func (t *Topology) LinkChildNode(dn *DataNode) {
-	if t.nodes[dn.Url()] == nil {
-		t.nodes[dn.Url()] = dn
-		glog.V(0).Infoln("adds child", dn.Url())
-	}
-}
-
-func (t *Topology) UnlinkChildNode(host string) {
-	node := t.nodes[host]
-	if node != nil {
-		delete(t.nodes, host)
-	}
-}

@@ -22,12 +22,11 @@ type DataNode struct {
 	LastSeen int64 // unix time in seconds
 	Dead     bool
 
-	topo  *Topology
 	mutex sync.RWMutex
 }
 
-func NewDataNode(ip string, port int, topo *Topology) *DataNode {
-	s := &DataNode{Ip: ip, Port: port, topo: topo}
+func NewDataNode(ip string, port int) *DataNode {
+	s := &DataNode{Ip: ip, Port: port}
 	s.volumes = make(map[storage.VolumeId]storage.VolumeInfo)
 	return s
 }
