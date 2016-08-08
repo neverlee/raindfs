@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"raindfs/operation"
+	"raindfs/sequence"
 	"raindfs/topology"
 
 	"github.com/gorilla/mux"
@@ -17,7 +18,7 @@ type MasterServer struct {
 
 	router *mux.Router
 
-	//Topo   *topology.Topology
+	Topo *topology.Topology
 	//vg     *topology.VolumeGrowth
 	//vgLock sync.Mutex
 
@@ -31,6 +32,8 @@ func NewMasterServer(r *mux.Router, port int, metaFolder string, pulseSeconds in
 		pulseSeconds: pulseSeconds,
 		router:       r,
 	}
+	seq := sequence.NewMemorySequencer() // setMax
+	ms.Topo = topology.NewTopology(seq, ms.pulseSeconds)
 
 	//r.HandleFunc("/", ms.uiStatusHandler) r.HandleFunc("/ui/index.html", ms.uiStatusHandler)
 	//r.HandleFunc("/dir/assign", ms.proxyToLeader(ms.dirAssignHandler))

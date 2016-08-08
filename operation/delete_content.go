@@ -13,8 +13,8 @@ type DeleteResult struct {
 	Error  string `json:"error,omitempty"`
 }
 
-func DeleteFile(master string, fileId string) error {
-	uri := fmt.Sprintf("http://%s/admin/delete/%s", master, fileId)
+func DeleteFile(server string, fileId string) error {
+	uri := fmt.Sprintf("http://%s/admin/delete/%s", server, fileId)
 	jsonBlob, err := util.Get(uri)
 	if err != nil {
 		return err

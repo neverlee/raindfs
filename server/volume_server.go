@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sync"
 
+	"raindfs/operation"
 	"raindfs/stats"
 	"raindfs/storage"
 	"raindfs/util"
@@ -55,9 +56,11 @@ func (v *VolumeServer) assignVolumeHandler(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		writeJsonError(w, r, http.StatusOK, err) // TODO 改为参数错误的状态码400
 	}
-	err = v.store.Location.AddVolume(vid)
-	done := err == nil || err == storage.ErrExistVolume
-	writeJsonQuiet(w, r, http.StatusOK, done)
+	ret := operation.AssignVolumeResult{}
+	if err = v.store.Location.AddVolume(vid); err != nil { // && err != storage.ErrExistVolume {
+		ret.Error = err.Error()
+	}
+	writeJsonQuiet(w, r, http.StatusOK, ret)
 }
 
 func (v *VolumeServer) deleteVolumeHandler(w http.ResponseWriter, r *http.Request) {
@@ -89,7 +92,10 @@ func (vs *VolumeServer) statusHandler(w http.ResponseWriter, r *http.Request) {
 func (vs *VolumeServer) assignFileidHandler(w http.ResponseWriter, r *http.Request) {
 	volume := vs.store.Location.PickWritableVolume()
 	fid := volume.GenFileId()
-	writeJsonQuiet(w, r, http.StatusOK, fid.String())
+	ret := operation.AssignResult{
+		Fid: fid.String(),
+	}
+	writeJsonQuiet(w, r, http.StatusOK, ret)
 }
 
 func (vs *VolumeServer) putHandler(w http.ResponseWriter, r *http.Request) {
@@ -142,12 +148,14 @@ func (vs *VolumeServer) deleteHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	volume := vs.store.Location.GetVolume(fid.VolumeId)
+	ret := operation.DeleteResult{}
 	if volume == nil {
+		ret.Status = 1
 		writeJsonError(w, r, http.StatusOK, errors.New("No such volume")) // TODO
 		return
 	}
 	volume.DeleteFile(fid)
-	writeJsonQuiet(w, r, http.StatusOK, "done") // TODO
+	writeJsonQuiet(w, r, http.StatusOK, ret) // TODO
 }
 
 //func heartBeat() {
