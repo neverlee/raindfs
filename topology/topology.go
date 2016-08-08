@@ -54,30 +54,28 @@ func (t *Topology) HasWritableVolume() bool {
 //	return storage.NewFileId(*vid, fileId, rand.Uint32()).String(), count, datanodes.Head(), nil
 //}
 
-//func (t *Topology) ProcessJoinMessage(joinMessage *operation.JoinMessage) {
-//	dn := t.FindDataNode(joinMessage.Ip, int(joinMessage.Port))
-//	if joinMessage.IsInit && dn != nil {
-//		t.UnRegisterDataNode(dn)
-//	}
-//	dn = t.GetOrCreateDataNode(joinMessage.Ip,
-//		int(joinMessage.Port),
-//		int(joinMessage.MaxVolumeCount))
-//	var volumeInfos []storage.VolumeInfo
-//	for _, v := range joinMessage.Volumes {
-//		if vi, err := storage.NewVolumeInfo(v); err == nil {
-//			volumeInfos = append(volumeInfos, vi)
-//		} else {
-//			glog.V(0).Infoln("Fail to convert joined volume information:", err.Error())
-//		}
-//	}
-//	deletedVolumes := dn.UpdateVolumes(volumeInfos)
-//	for _, v := range volumeInfos {
-//		t.RegisterVolumeLayout(v, dn)
-//	}
-//	for _, v := range deletedVolumes {
-//		t.UnRegisterVolumeLayout(v, dn)
-//	}
-//}
+func (t *Topology) ProcessJoinMessage(joinMessage *operation.JoinMessage) {
+	dn := t.nodemap.FindDataNode(joinMessage.Ip, int(joinMessage.Port))
+	if joinMessage.IsInit && dn != nil {
+		//t.UnRegisterDataNode(dn)
+	}
+	//	dn = t.GetOrCreateDataNode(joinMessage.Ip, int(joinMessage.Port), int(joinMessage.MaxVolumeCount))
+	//	var volumeInfos []storage.VolumeInfo
+	//	for _, v := range joinMessage.Volumes {
+	//		if vi, err := storage.NewVolumeInfo(v); err == nil {
+	//			volumeInfos = append(volumeInfos, vi)
+	//		} else {
+	//			glog.V(0).Infoln("Fail to convert joined volume information:", err.Error())
+	//		}
+	//	}
+	//	deletedVolumes := dn.UpdateVolumes(volumeInfos)
+	//	for _, v := range volumeInfos {
+	//		t.RegisterVolumeLayout(v, dn)
+	//	}
+	//	for _, v := range deletedVolumes {
+	//		t.UnRegisterVolumeLayout(v, dn)
+	//	}
+}
 
 func (t *Topology) ToMap() interface{} {
 	m := make(map[string]interface{})

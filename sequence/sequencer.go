@@ -32,6 +32,7 @@ func (s *Sequencer) dump() error {
 func NewSequencer(path string) (m *Sequencer) {
 	s := &Sequencer{Counter: 0, file: path}
 	s.load()
+	s.dump()
 	return
 }
 
