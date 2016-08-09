@@ -81,11 +81,16 @@ func (s *Store) String() (str string) {
 	return
 }
 
-func NewStore(ip string, port int, dirname string) (s *Store) {
+func NewStore(ip string, port int, dirname string, bootClusters []string) (s *Store) {
 	s = &Store{Port: port, Ip: ip}
 	s.Location = NewDiskLocation(dirname)
 	s.Location.loadExistingVolumes()
+	s.masterNodes = NewMasterNodes(bootClusters)
 	return
+}
+
+func (s *Store) Test() {
+	glog.Extraln(s.masterNodes.FindMaster())
 }
 
 func (s *Store) Status() []*VolumeInfo {

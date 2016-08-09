@@ -45,7 +45,6 @@ func NewMasterServer(r *mux.Router, port int, metaFolder string, pulseSeconds in
 	//r.HandleFunc("/dir/lookup", ms.proxyToLeader(ms.dirLookupHandler))
 	//r.HandleFunc("/dir/join",   ms.proxyToLeader(ms.dirJoinHandler))
 	//r.HandleFunc("/dir/status", ms.proxyToLeader(ms.dirStatusHandler))
-	//r.HandleFunc("/col/delete", ms.proxyToLeader(ms.collectionDeleteHandler))
 	//r.HandleFunc("/vol/lookup", ms.proxyToLeader(ms.volumeLookupHandler))
 	//r.HandleFunc("/vol/grow",   ms.proxyToLeader(ms.volumeGrowHandler))
 	//r.HandleFunc("/vol/status", ms.proxyToLeader(ms.volumeStatusHandler))
@@ -56,8 +55,11 @@ func NewMasterServer(r *mux.Router, port int, metaFolder string, pulseSeconds in
 
 	r.HandleFunc("/cluster/status", ms.clusterStatusHandler)
 
+	r.HandleFunc("/stats/nodes", ms.statsNodesHandler)
 	r.HandleFunc("/stats/counter", statsCounterHandler)
 	r.HandleFunc("/stats/memory", statsMemoryHandler)
+
+	r.HandleFunc("/test", ms.testHandler)
 
 	return ms
 }
@@ -70,4 +72,13 @@ func (m *MasterServer) clusterStatusHandler(w http.ResponseWriter, r *http.Reque
 		Clusters: []string{hi},
 	}
 	writeJsonQuiet(w, r, http.StatusOK, ret)
+}
+
+func (m *MasterServer) statsNodesHandler(w http.ResponseWriter, r *http.Request) {
+	ret := m.Topo.ToMap()
+	writeJsonQuiet(w, r, http.StatusOK, ret)
+}
+
+func (m *MasterServer) testHandler(w http.ResponseWriter, r *http.Request) {
+	writeJsonQuiet(w, r, http.StatusOK, "test")
 }

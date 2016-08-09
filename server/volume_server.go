@@ -44,6 +44,7 @@ func NewVolumeServer(ip string, port int, data string, r *mux.Router, pulseSecon
 	r.HandleFunc("/stats/counter", statsCounterHandler)
 	r.HandleFunc("/stats/memory", statsMemoryHandler)
 	r.HandleFunc("/stats/disk", vs.statsDiskHandler)
+	r.HandleFunc("/test", vs.testHandler)
 	//adminMux.HandleFunc("/", vs.privateStoreHandler)
 
 	return vs
@@ -202,4 +203,9 @@ func (vs *VolumeServer) Shutdown() {
 	glog.V(0).Infoln("Shutting down volume server...")
 	//vs.store.Close()
 	glog.V(0).Infoln("Shut down successfully!")
+}
+
+func (v *VolumeServer) testHandler(w http.ResponseWriter, r *http.Request) {
+	v.store.Test()
+	writeJsonQuiet(w, r, http.StatusOK, "test")
 }

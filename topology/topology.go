@@ -89,22 +89,7 @@ func (t *Topology) ToMap() interface{} {
 	m := make(map[string]interface{})
 	//m["Max"] = t.GetMaxVolumeCount()
 	m["DataNodes"] = t.nodemap.ToMap()
-	//m["layouts"] = layouts
-	return m
-}
-
-func (t *Topology) ToVolumeMap() interface{} {
-	m := make(map[string]interface{})
-	//m["Max"] = t.GetMaxVolumeCount()
-	//dcs := make(map[string]interface{})
-	//for _, dn := range t.nodes {
-	//	var volumes []interface{}
-	//	for _, v := range dn.GetVolumes() {
-	//		volumes = append(volumes, v)
-	//	}
-	//	dcs[dn.Url()] = volumes
-	//}
-	//m["DataNodes"] = dcs
+	m["layouts"] = t.volumeLayout.ToMap()
 	return m
 }
 

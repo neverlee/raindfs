@@ -9,6 +9,10 @@ import (
 	"github.com/neverlee/glog"
 )
 
+const (
+	replicate = 2
+)
+
 // mapping from volume to its locations, inverted from server to volume
 type VolumeLayout struct {
 	vid2location     map[storage.VolumeId]*VolumeLocationList
@@ -38,7 +42,7 @@ func (vl *VolumeLayout) RegisterVolume(v *storage.VolumeInfo, dn *DataNode) {
 	}
 	vl.vid2location[v.Id].Set(dn)
 	glog.V(4).Infoln("volume", v.Id, "added to dn", dn.Url(), "len", vl.vid2location[v.Id].Length())
-	if vl.vid2location[v.Id].Length() == 2 && vl.isWritable(v) {
+	if vl.vid2location[v.Id].Length() == replicate && vl.isWritable(v) {
 		if _, ok := vl.oversizedVolumes[v.Id]; !ok {
 			vl.addToWritable(v.Id)
 		}
@@ -129,7 +133,7 @@ func (vl *VolumeLayout) SetVolumeUnavailable(dn *DataNode, vid storage.VolumeId)
 
 	if location, ok := vl.vid2location[vid]; ok {
 		if location.Remove(dn) {
-			if location.Length() < 2 {
+			if location.Length() < replicate {
 				glog.V(0).Infoln("Volume", vid, "has", location.Length(), "replica, less than required")
 				return vl.removeFromWritable(vid)
 			}
@@ -142,7 +146,7 @@ func (vl *VolumeLayout) SetVolumeAvailable(dn *DataNode, vid storage.VolumeId) b
 	defer vl.accessLock.Unlock()
 
 	vl.vid2location[vid].Set(dn)
-	if vl.vid2location[vid].Length() >= 2 {
+	if vl.vid2location[vid].Length() >= replicate {
 		return vl.setVolumeWritable(vid)
 	}
 	return false
@@ -158,6 +162,10 @@ func (vl *VolumeLayout) SetVolumeCapacityFull(vid storage.VolumeId) bool {
 func (vl *VolumeLayout) ToMap() map[string]interface{} {
 	m := make(map[string]interface{})
 	m["writables"] = vl.writables
-	m["locations"] = vl.vid2location
+	svid2loc := make(map[string]*VolumeLocationList, len(vl.vid2location))
+	for k, v := range vl.vid2location {
+		svid2loc[k.String()] = v
+	}
+	m["locations"] = svid2loc
 	return m
 }
