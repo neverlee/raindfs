@@ -3,6 +3,8 @@ package storage
 import (
 	"fmt"
 	"sort"
+
+	"raindfs/operation"
 )
 
 type VolumeInfo struct {
@@ -11,10 +13,18 @@ type VolumeInfo struct {
 	FileCount        int
 	DeleteCount      int
 	DeletedByteCount uint64
+	ReadOnly         bool
 }
 
-func NewVolumeInfo() *VolumeInfo {
-	vi := &VolumeInfo{}
+func NewVolumeInfo(vim *operation.VolumeInformationMessage) *VolumeInfo {
+	vi := &VolumeInfo{
+		Id:               VolumeId(vim.Id),
+		Size:             uint64(vim.Size),
+		FileCount:        int(vim.FileCount),
+		DeleteCount:      int(vim.DeleteCount),
+		DeletedByteCount: uint64(vim.DeletedByteCount),
+		ReadOnly:         vim.ReadOnly,
+	}
 	return vi
 }
 

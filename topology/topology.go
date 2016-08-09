@@ -1,8 +1,11 @@
 package topology
 
 import (
+	"raindfs/operation"
 	"raindfs/sequence"
 	"raindfs/storage"
+
+	"github.com/neverlee/glog"
 )
 
 type Topology struct {
@@ -54,27 +57,32 @@ func (t *Topology) HasWritableVolume() bool {
 //	return storage.NewFileId(*vid, fileId, rand.Uint32()).String(), count, datanodes.Head(), nil
 //}
 
+func (t *Topology) UnRegisterDataNode(dn *DataNode) {
+	for _, v := range dn.GetVolumes() {
+		glog.V(0).Infoln("Removing Volume", v.Id, "from the dead volume server", dn)
+		t.volumeLayout.SetVolumeUnavailable(dn, v.Id)
+	}
+	t.nodemap.UnlinkChildNode(dn.Url())
+}
+
 func (t *Topology) ProcessJoinMessage(joinMessage *operation.JoinMessage) {
 	dn := t.nodemap.FindDataNode(joinMessage.Ip, int(joinMessage.Port))
 	if joinMessage.IsInit && dn != nil {
-		//t.UnRegisterDataNode(dn)
+		t.UnRegisterDataNode(dn)
 	}
-	//	dn = t.GetOrCreateDataNode(joinMessage.Ip, int(joinMessage.Port), int(joinMessage.MaxVolumeCount))
-	//	var volumeInfos []storage.VolumeInfo
-	//	for _, v := range joinMessage.Volumes {
-	//		if vi, err := storage.NewVolumeInfo(v); err == nil {
-	//			volumeInfos = append(volumeInfos, vi)
-	//		} else {
-	//			glog.V(0).Infoln("Fail to convert joined volume information:", err.Error())
-	//		}
-	//	}
-	//	deletedVolumes := dn.UpdateVolumes(volumeInfos)
-	//	for _, v := range volumeInfos {
-	//		t.RegisterVolumeLayout(v, dn)
-	//	}
-	//	for _, v := range deletedVolumes {
-	//		t.UnRegisterVolumeLayout(v, dn)
-	//	}
+	dn = t.nodemap.GetOrCreateDataNode(joinMessage.Ip, int(joinMessage.Port), int(joinMessage.MaxVolumeCount))
+	var volumeInfos []storage.VolumeInfo
+	for _, v := range joinMessage.Volumes {
+		vi := *storage.NewVolumeInfo(v)
+		volumeInfos = append(volumeInfos, vi)
+	}
+	deletedVolumes := dn.UpdateVolumes(volumeInfos)
+	for _, v := range volumeInfos {
+		t.volumeLayout.RegisterVolume(&v, dn)
+	}
+	for _, v := range deletedVolumes {
+		t.volumeLayout.UnRegisterVolume(&v, dn)
+	}
 }
 
 func (t *Topology) ToMap() interface{} {
