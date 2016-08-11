@@ -166,6 +166,6 @@ func (vl *VolumeLayout) ToMap() map[string]interface{} {
 	for k, v := range vl.vid2location {
 		svid2loc[k.String()] = v
 	}
-	m["locations"] = svid2loc
+	m["vid2location"] = svid2loc
 	return m
 }

@@ -77,6 +77,7 @@ func (t *Topology) ProcessJoinMessage(joinMessage *operation.JoinMessage) {
 		volumeInfos = append(volumeInfos, vi)
 	}
 	deletedVolumes := dn.UpdateVolumes(volumeInfos)
+	glog.Extraln(">>>", volumeInfos, deletedVolumes)
 	for _, v := range volumeInfos {
 		t.volumeLayout.RegisterVolume(&v, dn)
 	}
