@@ -1,15 +1,19 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"path"
 
 	"raindfs/operation"
 	"raindfs/sequence"
 	"raindfs/topology"
+	"raindfs/util"
 
 	"github.com/gorilla/mux"
+	"github.com/neverlee/glog"
 )
 
 const (
@@ -41,9 +45,6 @@ func NewMasterServer(r *mux.Router, port int, metaFolder string, pulseSeconds in
 	ms.Topo = topology.NewTopology(seq, ms.pulseSeconds)
 
 	//r.HandleFunc("/", ms.uiStatusHandler) r.HandleFunc("/ui/index.html", ms.uiStatusHandler)
-	//r.HandleFunc("/dir/assign", ms.proxyToLeader(ms.dirAssignHandler))
-	//r.HandleFunc("/dir/lookup", ms.proxyToLeader(ms.dirLookupHandler))
-	//r.HandleFunc("/dir/join",   ms.proxyToLeader(ms.dirJoinHandler))
 	//r.HandleFunc("/dir/status", ms.proxyToLeader(ms.dirStatusHandler))
 	//r.HandleFunc("/vol/lookup", ms.proxyToLeader(ms.volumeLookupHandler))
 	//r.HandleFunc("/vol/grow",   ms.proxyToLeader(ms.volumeGrowHandler))
@@ -53,6 +54,9 @@ func NewMasterServer(r *mux.Router, port int, metaFolder string, pulseSeconds in
 	//r.HandleFunc("/delete", ms.deleteFromMasterServerHandler)
 	//r.HandleFunc("/{fileId}",   ms.proxyToLeader(ms.redirectHandler))
 
+	//r.HandleFunc("/dir/assign", ms.proxyToLeader(ms.dirAssignHandler))
+	//r.HandleFunc("/dir/lookup", ms.proxyToLeader(ms.dirLookupHandler))
+	r.HandleFunc("/node/join", ms.nodeJoinHandler) // proxy
 	r.HandleFunc("/cluster/status", ms.clusterStatusHandler)
 
 	r.HandleFunc("/stats/nodes", ms.statsNodesHandler)
@@ -80,5 +84,20 @@ func (m *MasterServer) statsNodesHandler(w http.ResponseWriter, r *http.Request)
 }
 
 func (m *MasterServer) testHandler(w http.ResponseWriter, r *http.Request) {
-	writeJsonQuiet(w, r, http.StatusOK, "test")
+	ret := m.Topo.ToMap()
+	writeJsonQuiet(w, r, http.StatusOK, ret)
+}
+
+func (m *MasterServer) nodeJoinHandler(w http.ResponseWriter, r *http.Request) {
+	ip, _ := util.Ipport(r.RemoteAddr)
+	glog.Extraln(">>>>>>", ip)
+	if blob, err := ioutil.ReadAll(r.Body); err == nil {
+		glog.Extraln(">>>", string(blob))
+		fmt.Fprint(w, string(blob))
+		var jmsg operation.JoinMessage
+		if jerr := json.Unmarshal(blob, &jmsg); jerr == nil {
+			jmsg.Ip = ip
+			m.Topo.ProcessJoinMessage(&jmsg)
+		}
+	}
 }

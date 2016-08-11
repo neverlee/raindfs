@@ -62,6 +62,18 @@ func (l *DiskLocation) GetVolume(vid VolumeId) *Volume {
 	return nil
 }
 
+func (l *DiskLocation) GetAllVolume() []*Volume {
+	l.mutex.Lock()
+	l.mutex.Unlock()
+	ret := make([]*Volume, len(l.volumes))
+	i := 0
+	for _, v := range l.volumes {
+		ret[i] = v
+		i++
+	}
+	return ret
+}
+
 func (l *DiskLocation) AddVolume(vid VolumeId) error {
 	l.mutex.Lock()
 	l.mutex.Unlock()

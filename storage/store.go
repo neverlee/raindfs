@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"sync"
 
 	"raindfs/operation"
 	"raindfs/util"
@@ -17,6 +18,7 @@ import (
 type MasterNodes struct {
 	nodes    []string
 	lastNode int
+	mutex    sync.Mutex
 }
 
 func (mn *MasterNodes) String() string {
@@ -32,6 +34,8 @@ func NewMasterNodes(bootstrapNode []string) (mn *MasterNodes) {
 }
 
 func (mn *MasterNodes) Reset() {
+	mn.mutex.Lock()
+	defer mn.mutex.Unlock()
 	glog.V(4).Infof("Resetting master nodes: %v", mn)
 	if len(mn.nodes) > 1 && mn.lastNode >= 0 {
 		glog.V(0).Infof("Reset master %s from: %v", mn.nodes[mn.lastNode], mn.nodes)
@@ -40,6 +44,8 @@ func (mn *MasterNodes) Reset() {
 }
 
 func (mn *MasterNodes) FindMaster() (string, error) {
+	mn.mutex.Lock()
+	defer mn.mutex.Unlock()
 	if len(mn.nodes) == 0 {
 		return "", errors.New("No master node found!")
 	}
@@ -81,16 +87,19 @@ func (s *Store) String() (str string) {
 	return
 }
 
-func NewStore(ip string, port int, dirname string, bootClusters []string) (s *Store) {
+func NewStore(ip string, port int, dirname string) (s *Store) {
 	s = &Store{Port: port, Ip: ip}
 	s.Location = NewDiskLocation(dirname)
 	s.Location.loadExistingVolumes()
-	s.masterNodes = NewMasterNodes(bootClusters)
 	return
 }
 
 func (s *Store) Test() {
 	glog.Extraln(s.masterNodes.FindMaster())
+}
+
+func (s *Store) SetClusters(clusters []string) {
+	s.masterNodes = NewMasterNodes(clusters)
 }
 
 func (s *Store) Status() []*VolumeInfo {
@@ -104,9 +113,10 @@ func (s *Store) SendHeartbeatToMaster() (masterNode string, e error) {
 	}
 	var volumeMessages []*operation.VolumeInformationMessage
 	maxVolumeCount := 0
-	for k, _ := range s.Location.volumes {
+	volumes := s.Location.GetAllVolume()
+	for _, v := range volumes {
 		volumeMessage := &operation.VolumeInformationMessage{
-			Id: uint32(k),
+			Id: uint32(v.Id),
 			//Size:             uint64(v.Size()),
 			//FileCount:        uint64(v.FileCount()),
 			//DeleteCount:      uint64(v.DeletedCount()),
@@ -128,7 +138,7 @@ func (s *Store) SendHeartbeatToMaster() (masterNode string, e error) {
 		return "", err
 	}
 
-	joinUrl := "http://" + masterNode + "/dir/join"
+	joinUrl := "http://" + masterNode + "/node/join"
 	glog.V(4).Infof("Connecting to %s ...", joinUrl)
 
 	_, err = util.PostBytes(joinUrl, data)

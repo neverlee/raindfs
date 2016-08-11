@@ -16,7 +16,7 @@ import (
 type volumeServerOption struct {
 	ip                    string
 	port                  int
-	master                string
+	masters               string
 	data                  string
 	pulseSeconds          int
 	idleConnectionTimeout int
@@ -30,7 +30,7 @@ func init() {
 	vsopt = volumeServerOption{
 		ip:                    *cmdVolume.Flag.String("ip", "0.0.0.0", "ip or server name"),
 		port:                  *cmdVolume.Flag.Int("port", 20000, "http listen port"),
-		master:                *cmdVolume.Flag.String("master", "127.0.0.1:10000", "master host"),
+		masters:               *cmdVolume.Flag.String("master", "127.0.0.1:10000,", "master hosts"),
 		data:                  *cmdVolume.Flag.String("-dir", "./data", "data dir"),
 		pulseSeconds:          *cmdVolume.Flag.Int("pulseseconds", 5, "number of seconds between heartbeats, must be smaller than or equal to the master's setting"),
 		idleConnectionTimeout: *cmdVolume.Flag.Int("idletimeout", 10, "connection idle seconds"),
@@ -57,10 +57,10 @@ func runVolume(cmd *Command, args []string) bool {
 		glog.Fatalf("Check data Folder (-dir) Writable %s : %s", vsopt.data, err)
 	}
 
-	volumeServer := server.NewVolumeServer(vsopt.ip, vsopt.port, vsopt.data, router, vsopt.pulseSeconds)
+	volumeServer := server.NewVolumeServer(vsopt.ip, vsopt.port, vsopt.data, vsopt.masters, router, vsopt.pulseSeconds)
 
 	listeningAddress := vsopt.ip + ":" + strconv.Itoa(vsopt.port)
-	glog.V(0).Infoln("Start Seaweed volume server", util.VERSION, "at", listeningAddress)
+	glog.V(0).Infoln("Start Rain volume server", util.VERSION, "at", listeningAddress)
 	listener, e := util.NewListener(listeningAddress, time.Duration(vsopt.idleConnectionTimeout)*time.Second)
 	if e != nil {
 		glog.Fatalf("Volume server listener error:%v", e)

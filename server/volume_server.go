@@ -2,8 +2,11 @@ package server
 
 import (
 	"errors"
+	"math/rand"
 	"net/http"
+	"strings"
 	"sync"
+	"time"
 
 	"raindfs/operation"
 	"raindfs/stats"
@@ -21,12 +24,14 @@ type VolumeServer struct {
 	store        *storage.Store
 }
 
-func NewVolumeServer(ip string, port int, data string, r *mux.Router, pulseSeconds int) *VolumeServer {
+func NewVolumeServer(ip string, port int, data string, masters string, r *mux.Router, pulseSeconds int) *VolumeServer {
 	vs := &VolumeServer{
 		pulseSeconds: pulseSeconds,
 	}
 	vs.store = storage.NewStore(ip, port, data)
+	vs.store.SetClusters(strings.Split(masters, ","))
 
+	go vs.heartBeat()
 	//r.HandleFunc("/ui/index.html", vs.uiStatusHandler)
 	r.HandleFunc("/status", vs.statusHandler)
 	r.HandleFunc("/admin/assign_volume/{vid}", vs.assignVolumeHandler)
@@ -159,44 +164,30 @@ func (vs *VolumeServer) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	writeJsonQuiet(w, r, http.StatusOK, ret) // TODO
 }
 
-//func heartBeat() {
-//	connected := true
-//
-//	glog.V(0).Infof("Volume server bootstraps with master %s", vs.GetMasterNode())
-//	vs.store.SetBootstrapMaster(vs.GetMasterNode())
-//	for {
-//		glog.V(4).Infof("Volume server sending to master %s", vs.GetMasterNode())
-//		master, err := vs.store.SendHeartbeatToMaster()
-//		if err == nil {
-//			if !connected {
-//				connected = true
-//				vs.SetMasterNode(master)
-//				glog.V(0).Infoln("Volume Server Connected with master at", master)
-//			}
-//		} else {
-//			glog.V(1).Infof("Volume Server Failed to talk with master %s: %v", vs.masterNode, err)
-//			if connected {
-//				connected = false
-//			}
-//		}
-//		if connected {
-//			time.Sleep(time.Duration(float32(vs.pulseSeconds*1e3)*(1+rand.Float32())) * time.Millisecond)
-//		} else {
-//			time.Sleep(time.Duration(float32(vs.pulseSeconds*1e3)*0.25) * time.Millisecond)
-//		}
-//	}
-//}
+func (vs *VolumeServer) heartBeat() {
+	connected := true
 
-func (vs *VolumeServer) GetMasterNode() string {
-	vs.mnLock.RLock()
-	defer vs.mnLock.RUnlock()
-	return vs.masterNode
-}
-
-func (vs *VolumeServer) SetMasterNode(masterNode string) {
-	vs.mnLock.Lock()
-	defer vs.mnLock.Unlock()
-	vs.masterNode = masterNode
+	for {
+		glog.V(0).Infof("Volume server sending to master ")
+		master, err := vs.store.SendHeartbeatToMaster()
+		if err == nil {
+			if !connected {
+				connected = true
+				//vs.SetMasterNode(master)
+				glog.V(0).Infoln("Volume Server Connected with master at", master)
+			}
+		} else {
+			glog.V(1).Infof("Volume Server Failed to talk with master %s: %v", vs.masterNode, err)
+			if connected {
+				connected = false
+			}
+		}
+		if connected {
+			time.Sleep(time.Duration(float32(vs.pulseSeconds*1e3)*(1+rand.Float32())) * time.Millisecond)
+		} else {
+			time.Sleep(time.Duration(float32(vs.pulseSeconds*1e3)*0.25) * time.Millisecond)
+		}
+	}
 }
 
 func (vs *VolumeServer) Shutdown() {
