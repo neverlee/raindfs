@@ -22,6 +22,7 @@ func ParseFileId(fid string) (*FileId, error) {
 	}
 	return nil, errors.New("Invalid fid " + fid)
 }
+
 func (n *FileId) String() string {
 	return fmt.Sprintf("%x-%x", uint32(n.VolumeId), n.Key)
 }

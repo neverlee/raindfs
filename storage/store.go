@@ -115,12 +115,14 @@ func (s *Store) SendHeartbeatToMaster() (masterNode string, e error) {
 	maxVolumeCount := 0
 	volumes := s.Location.GetAllVolume()
 	for _, v := range volumes {
+		vinfo := v.GetInfo()
 		volumeMessage := &operation.VolumeInformationMessage{
-			Id: uint32(v.Id),
-			//Size:             uint64(v.Size()),
-			//FileCount:        uint64(v.FileCount()),
-			//DeleteCount:      uint64(v.DeletedCount()),
-			//DeletedByteCount: v.DeletedSize(),
+			Id:               uint32(v.Id),
+			Size:             uint64(vinfo.Size),
+			FileCount:        uint64(vinfo.FileCount),
+			DeleteCount:      uint64(vinfo.DeleteCount),
+			DeletedByteCount: vinfo.DeletedByteCount,
+			ReadOnly:         vinfo.ReadOnly,
 		}
 		volumeMessages = append(volumeMessages, volumeMessage)
 	}
@@ -141,17 +143,18 @@ func (s *Store) SendHeartbeatToMaster() (masterNode string, e error) {
 	joinUrl := "http://" + masterNode + "/node/join"
 	glog.V(4).Infof("Connecting to %s ...", joinUrl)
 
-	_, err = util.PostBytes(joinUrl, data)
+	jsonBlob, err := util.PostBytes(joinUrl, data)
 	if err != nil {
 		s.masterNodes.Reset()
 		return "", err
 	}
-	//var ret operation.JoinResult
-	//if err := json.Unmarshal(jsonBlob, &ret); err != nil {
-	//	glog.V(0).Infof("Failed to join %s with response: %s", joinUrl, string(jsonBlob))
-	//	s.masterNodes.Reset()
-	//	return masterNode, err
-	//}
+	var ret operation.JoinResult
+	if err := json.Unmarshal(jsonBlob, &ret); err != nil {
+		glog.V(0).Infof("Failed to join %s with response: %s", joinUrl, string(jsonBlob))
+		// TODO 更新volume信息
+		//s.masterNodes.Reset()
+		//return masterNode, err
+	}
 	//if ret.Error != "" {
 	//	s.masterNodes.Reset()
 	//	return masterNode, errors.New(ret.Error)

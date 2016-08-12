@@ -96,7 +96,9 @@ func (m *MasterServer) nodeJoinHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, string(blob))
 		var jmsg operation.JoinMessage
 		if jerr := json.Unmarshal(blob, &jmsg); jerr == nil {
-			jmsg.Ip = ip
+			if jmsg.Ip != "0.0.0.0" && jmsg.Ip != "[::]" {
+				jmsg.Ip = ip
+			}
 			m.Topo.ProcessJoinMessage(&jmsg)
 		}
 	}

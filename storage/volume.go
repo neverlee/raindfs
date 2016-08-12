@@ -2,10 +2,8 @@ package storage
 
 import (
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -22,33 +20,12 @@ const (
 	MetaName        = "meta.json"
 )
 
-type VolumeMeta struct {
-	LastModifiedTime uint64     `json:"ModTime"`
-	Info             VolumeInfo `json:"Info"`
-}
-
-func (v *VolumeMeta) load(path string) error {
-	blob, err := ioutil.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(blob, v)
-}
-
-func (v *VolumeMeta) dump(path string) error {
-	blob, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-	return ioutil.WriteFile(path, blob, 0644)
-}
-
 type Volume struct {
 	Id  VolumeId
 	dir string
 
-	dataFileAccessLock sync.Mutex
-	VolumeMeta
+	mutex sync.Mutex
+	Info VolumeInfo
 }
 
 func NewVolume(dirname string, id VolumeId) (*Volume, error) {
@@ -57,11 +34,11 @@ func NewVolume(dirname string, id VolumeId) (*Volume, error) {
 		dir: path.Join(dirname, id.String()) + VolumeExtension,
 	}
 	if err := os.MkdirAll(v.dir, 0755); os.IsExist(err) {
-		return v, v.load(v.MetaPath())
+		return v, v.Info.load(v.MetaPath())
 	} else if err != nil {
 		return nil, err
 	}
-	v.dump(v.MetaPath())
+	v.Info.dump(v.MetaPath())
 	return v, nil
 }
 
@@ -69,28 +46,34 @@ func (v *Volume) String() string {
 	return fmt.Sprintf("Id:%v, dir:%s", v.Id, v.dir)
 }
 
+func (v *Volume) GetInfo() VolumeInfo {
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
+	return v.Info
+}
+
 func (v *Volume) MetaPath() string {
 	return path.Join(v.dir, MetaName)
 }
 
 func (v *Volume) Destroy() {
-	v.dataFileAccessLock.Lock()
-	defer v.dataFileAccessLock.Unlock()
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
 	// TODO: first remove then async delete, 保证不出错
 	_ = os.RemoveAll(v.dir)
 }
 
 func (v *Volume) Sync() error {
-	v.dataFileAccessLock.Lock()
-	defer v.dataFileAccessLock.Unlock()
-	return v.dump(v.MetaPath())
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
+	return v.Info.dump(v.MetaPath())
 }
 
 // Close cleanly shuts down this volume
 func (v *Volume) Close() {
-	v.dataFileAccessLock.Lock()
-	defer v.dataFileAccessLock.Unlock()
-	v.dump(v.MetaPath())
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
+	v.Info.dump(v.MetaPath())
 }
 
 func (v *Volume) GenFileId() *FileId {
