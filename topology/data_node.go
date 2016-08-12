@@ -12,21 +12,21 @@ import (
 
 type DataNode struct {
 	//id                string
-	Ip   string
-	Port int
+	ip   string
+	port int
 
 	volumeCount       int
 	activeVolumeCount int
 
 	volumes  map[storage.VolumeId]storage.VolumeInfo
 	LastSeen int64 // unix time in seconds
-	Dead     bool
+	Dead     bool  // TODO 状态，enable，dead，close
 
 	mutex sync.RWMutex
 }
 
 func NewDataNode(ip string, port int) *DataNode {
-	s := &DataNode{Ip: ip, Port: port}
+	s := &DataNode{ip: ip, port: port}
 	s.volumes = make(map[storage.VolumeId]storage.VolumeInfo)
 	return s
 }
@@ -34,7 +34,7 @@ func NewDataNode(ip string, port int) *DataNode {
 func (dn *DataNode) String() string {
 	dn.mutex.RLock()
 	defer dn.mutex.RUnlock()
-	return fmt.Sprintf("Node> volumes:%v, Ip:%s, Port:%d, Dead:%v", dn.volumes, dn.Ip, dn.Port, dn.Dead)
+	return fmt.Sprintf("Node> volumes:%v, Ip:%s, Port:%d, Dead:%v", dn.volumes, dn.ip, dn.port, dn.Dead)
 }
 
 func (dn *DataNode) AddOrUpdateVolume(v storage.VolumeInfo) {
@@ -74,14 +74,17 @@ func (dn *DataNode) GetVolumes() (ret []storage.VolumeInfo) {
 }
 
 func (dn *DataNode) MatchLocation(ip string, port int) bool {
-	return dn.Ip == ip && dn.Port == port
+	return dn.ip == ip && dn.port == port
 }
 
 func (dn *DataNode) Url() string {
-	return dn.Ip + ":" + strconv.Itoa(dn.Port)
+	// ip and port 固定
+	return dn.ip + ":" + strconv.Itoa(dn.port)
 }
 
 func (dn *DataNode) ToMap() interface{} {
+	dn.mutex.RLock()
+	defer dn.mutex.RUnlock()
 	ret := make(map[string]interface{})
 	ret["Url"] = dn.Url()
 	return ret

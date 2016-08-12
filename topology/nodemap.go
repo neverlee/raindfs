@@ -46,16 +46,14 @@ func (dnm *DataNodeMap) GetOrCreateDataNode(ip string, port int, maxVolumeCount 
 	key := fmt.Sprintf("%s:%d", ip, port)
 	if dn, ok := dnm.nodes[key]; ok {
 		dn.LastSeen = time.Now().Unix()
-		//if dn.Dead {
-		//	dn.Dead = false
-		//	t.chanRecoveredDataNodes <- dn
-		//}
+		if dn.Dead {
+			dn.Dead = false
+			//t.chanRecoveredDataNodes <- dn
+		}
 		return dn
 	}
 
 	dn := NewDataNode(ip, port)
-	dn.Ip = ip
-	dn.Port = port
 	dn.LastSeen = time.Now().Unix()
 	dnm.nodes[key] = dn
 	return dn

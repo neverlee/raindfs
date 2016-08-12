@@ -30,7 +30,7 @@ func (dnll *VolumeLocationList) Length() int {
 
 func (dnll *VolumeLocationList) Set(loc *DataNode) {
 	for i := 0; i < len(dnll.list); i++ {
-		if loc.Ip == dnll.list[i].Ip && loc.Port == dnll.list[i].Port {
+		if dnll.list[i].Url() == loc.Url() {
 			dnll.list[i] = loc
 			return
 		}
@@ -40,7 +40,7 @@ func (dnll *VolumeLocationList) Set(loc *DataNode) {
 
 func (dnll *VolumeLocationList) Remove(loc *DataNode) bool {
 	for i, dnl := range dnll.list {
-		if loc.Ip == dnl.Ip && loc.Port == dnl.Port {
+		if loc.Url() == dnl.Url() {
 			dnll.list = append(dnll.list[:i], dnll.list[i+1:]...)
 			return true
 		}

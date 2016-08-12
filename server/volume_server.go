@@ -39,8 +39,6 @@ func NewVolumeServer(ip string, port int, data string, masters string, r *mux.Ro
 	r.HandleFunc("/admin/put/{fid}", vs.putHandler)
 	r.HandleFunc("/admin/get/{fid}", vs.getHandler)
 	r.HandleFunc("/admin/delete/{fid}", vs.deleteHandler)
-	//r.HandleFunc("/admin/vacuum/commit", vs.vacuumVolumeCommitHandler)
-	//r.HandleFunc("/admin/sync/status", vs.getVolumeSyncStatusHandler)
 	r.HandleFunc("/stats/counter", statsCounterHandler)
 	r.HandleFunc("/stats/memory", statsMemoryHandler)
 	r.HandleFunc("/stats/disk", vs.statsDiskHandler)

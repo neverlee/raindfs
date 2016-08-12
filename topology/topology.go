@@ -48,6 +48,14 @@ func (t *Topology) HasWritableVolume() bool {
 	return t.volumeLayout.GetActiveVolumeCount() > 0
 }
 
+func (t *Topology) PickForWrite() (storage.VolumeId, *VolumeLocationList, error) {
+	//vid, datanodes, err := t.volumeLayout.PickForWrite()
+	return t.volumeLayout.PickForWrite()
+	//if err != nil || datanodes.Length() == 0 { }
+	//	fileId, count := t.Sequence.NextFileId(count)
+	//	return storage.NewFileId(*vid, fileId, rand.Uint32()).String(), count, datanodes.Head(), nil
+}
+
 //func (t *Topology) PickForWrite(count uint64) (string, uint64, *DataNode, error) {
 //	vid, count, datanodes, err := t.volumeLayout.PickForWrite(count, option)
 //	if err != nil || datanodes.Length() == 0 {
@@ -77,7 +85,6 @@ func (t *Topology) ProcessJoinMessage(joinMessage *operation.JoinMessage) {
 		volumeInfos = append(volumeInfos, vi)
 	}
 	deletedVolumes := dn.UpdateVolumes(volumeInfos)
-	glog.Extraln(">>>", volumeInfos, deletedVolumes)
 	for _, v := range volumeInfos {
 		t.volumeLayout.RegisterVolume(&v, dn)
 	}

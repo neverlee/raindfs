@@ -1,7 +1,9 @@
 package topology
 
 import (
+	"errors"
 	"fmt"
+	"math/rand"
 	"sync"
 
 	"raindfs/storage"
@@ -69,7 +71,7 @@ func (vl *VolumeLayout) addToWritable(vid storage.VolumeId) {
 }
 
 func (vl *VolumeLayout) isWritable(v *storage.VolumeInfo) bool {
-	//return !v.ReadOnly
+	// TODO datanode is not dead, and volume >= 2
 	return true
 }
 
@@ -93,7 +95,21 @@ func (vl *VolumeLayout) ListVolumeServers() (nodes []*DataNode) {
 	return
 }
 
-//func (vl *VolumeLayout) PickForWrite(count uint64) (*storage.VolumeId, uint64, *VolumeLocationList, error) {
+func (vl *VolumeLayout) PickForWrite() (storage.VolumeId, *VolumeLocationList, error) {
+	vl.accessLock.RLock()
+	defer vl.accessLock.RUnlock()
+
+	if len(vl.writables) == 0 {
+		return 0, nil, errors.New("No writable volumes available!")
+	}
+
+	index := rand.Intn(len(vl.writables))
+
+	vid := vl.writables[index]
+	loc, _ := vl.vid2location[vid]
+	return vid, loc, nil
+}
+
 func (vl *VolumeLayout) GetActiveVolumeCount() int {
 	vl.accessLock.RLock()
 	defer vl.accessLock.RUnlock()

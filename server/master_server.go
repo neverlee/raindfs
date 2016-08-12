@@ -9,6 +9,7 @@ import (
 
 	"raindfs/operation"
 	"raindfs/sequence"
+	"raindfs/storage"
 	"raindfs/topology"
 	"raindfs/util"
 
@@ -53,9 +54,11 @@ func NewMasterServer(r *mux.Router, port int, metaFolder string, pulseSeconds in
 	//r.HandleFunc("/submit", ms.submitFromMasterServerHandler)
 	//r.HandleFunc("/delete", ms.deleteFromMasterServerHandler)
 	//r.HandleFunc("/{fileId}",   ms.proxyToLeader(ms.redirectHandler))
-
 	//r.HandleFunc("/dir/assign", ms.proxyToLeader(ms.dirAssignHandler))
 	//r.HandleFunc("/dir/lookup", ms.proxyToLeader(ms.dirLookupHandler))
+
+	r.HandleFunc("/admin/assign_fileid", ms.assignFileidHandler)
+
 	r.HandleFunc("/node/join", ms.nodeJoinHandler) // proxy
 	r.HandleFunc("/cluster/status", ms.clusterStatusHandler)
 
@@ -102,4 +105,17 @@ func (m *MasterServer) nodeJoinHandler(w http.ResponseWriter, r *http.Request) {
 			m.Topo.ProcessJoinMessage(&jmsg)
 		}
 	}
+}
+
+func (m *MasterServer) assignFileidHandler(w http.ResponseWriter, r *http.Request) {
+	vid, _, err := m.Topo.PickForWrite()
+	if err == nil {
+		key := util.GenID()
+		fid := storage.NewFileId(vid, key)
+		ret := operation.AssignResult{
+			Fid: fid.String(),
+		}
+		writeJsonQuiet(w, r, http.StatusOK, ret)
+	}
+	writeJsonError(w, r, http.StatusOK, err)
 }
