@@ -151,14 +151,14 @@ func (s *Store) SendHeartbeatToMaster() (masterNode string, e error) {
 	var ret operation.JoinResult
 	if err := json.Unmarshal(jsonBlob, &ret); err != nil {
 		glog.V(0).Infof("Failed to join %s with response: %s", joinUrl, string(jsonBlob))
-		// TODO 更新volume信息
 		//s.masterNodes.Reset()
 		//return masterNode, err
+		return "", nil
 	}
-	//if ret.Error != "" {
-	//	s.masterNodes.Reset()
-	//	return masterNode, errors.New(ret.Error)
-	//}
+	if ret.Error != "" {
+		s.masterNodes.Reset()
+		return "", errors.New(ret.Error)
+	}
 	s.connected = true
 	return
 }

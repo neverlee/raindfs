@@ -58,6 +58,10 @@ func NewMasterServer(r *mux.Router, port int, metaFolder string, pulseSeconds in
 	//r.HandleFunc("/dir/lookup", ms.proxyToLeader(ms.dirLookupHandler))
 
 	r.HandleFunc("/admin/assign_fileid", ms.assignFileidHandler)
+	r.HandleFunc("/admin/put/{fid}", ms.putHandler)
+	r.HandleFunc("/admin/get/{fid}", ms.getHandler)
+	r.HandleFunc("/admin/delete/{fid}", ms.deleteHandler)
+
 
 	r.HandleFunc("/node/join", ms.nodeJoinHandler) // proxy
 	r.HandleFunc("/cluster/status", ms.clusterStatusHandler)
@@ -118,4 +122,64 @@ func (m *MasterServer) assignFileidHandler(w http.ResponseWriter, r *http.Reques
 		writeJsonQuiet(w, r, http.StatusOK, ret)
 	}
 	writeJsonError(w, r, http.StatusOK, err)
+}
+
+func (m *MasterServer) putHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	fidstr := vars["fid"]
+	fid, err := storage.ParseFileId(fidstr)
+	if err != nil {
+		writeJsonError(w, r, http.StatusOK, err)
+		return
+	}
+	volume := vs.store.Location.GetVolume(fid.VolumeId)
+	if volume == nil {
+		writeJsonError(w, r, http.StatusOK, errors.New("No such volume")) // TODO
+		return
+	}
+	err = volume.SaveFile(fid, r.Body)
+	defer r.Body.Close()
+	if err == nil {
+		writeJsonQuiet(w, r, http.StatusOK, "success")
+		return
+	}
+	writeJsonError(w, r, http.StatusOK, err) // TODO
+}
+
+func (m *MasterServer) getHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	fidstr := vars["fid"]
+	fid, err := storage.ParseFileId(fidstr)
+	if err != nil {
+		writeJsonError(w, r, http.StatusOK, err)
+		return
+	}
+	volume := vs.store.Location.GetVolume(fid.VolumeId)
+	if volume == nil {
+		writeJsonError(w, r, http.StatusOK, errors.New("No such volume")) // TODO
+		return
+	}
+	w.Header().Set("Content-Type", "application/octet-stream")
+	if err = volume.LoadFile(fid, w); err != nil {
+		writeJsonError(w, r, http.StatusNotFound, err) // TODO
+	}
+}
+
+func (m *MasterServer) deleteHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	fidstr := vars["fid"]
+	fid, err := storage.ParseFileId(fidstr)
+	if err != nil {
+		writeJsonError(w, r, http.StatusOK, err)
+		return
+	}
+	volume := vs.store.Location.GetVolume(fid.VolumeId)
+	ret := operation.DeleteResult{}
+	if volume == nil {
+		ret.Status = 1
+		writeJsonError(w, r, http.StatusOK, errors.New("No such volume")) // TODO
+		return
+	}
+	volume.DeleteFile(fid)
+	writeJsonQuiet(w, r, http.StatusOK, ret) // TODO
 }

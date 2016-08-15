@@ -18,7 +18,7 @@ type JoinMessage struct {
 }
 
 type JoinResult struct {
-	VolumeSizeLimit uint64         `json:"VolumeSizeLimit,omitempty"`
-	VolumeStatus    map[uint32]int `json:"VolumeStatus",omitempty"`
-	Error           string         `json:"error,omitempty"`
+	VolumeSizeLimit uint64         `json:"VolumeSizeLimit"`
+	VolumeStatus    map[uint32]int `json:"VolumeStatus"`
+	Error           string         `json:"error"`
 }

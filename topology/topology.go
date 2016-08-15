@@ -56,15 +56,6 @@ func (t *Topology) PickForWrite() (storage.VolumeId, *VolumeLocationList, error)
 	//	return storage.NewFileId(*vid, fileId, rand.Uint32()).String(), count, datanodes.Head(), nil
 }
 
-//func (t *Topology) PickForWrite(count uint64) (string, uint64, *DataNode, error) {
-//	vid, count, datanodes, err := t.volumeLayout.PickForWrite(count, option)
-//	if err != nil || datanodes.Length() == 0 {
-//		return "", 0, nil, errors.New("No writable volumes available!")
-//	}
-//	fileId, count := t.Sequence.NextFileId(count)
-//	return storage.NewFileId(*vid, fileId, rand.Uint32()).String(), count, datanodes.Head(), nil
-//}
-
 func (t *Topology) UnRegisterDataNode(dn *DataNode) {
 	for _, v := range dn.GetVolumes() {
 		glog.V(0).Infoln("Removing Volume", v.Id, "from the dead volume server", dn)
@@ -91,6 +82,10 @@ func (t *Topology) ProcessJoinMessage(joinMessage *operation.JoinMessage) {
 	for _, v := range deletedVolumes {
 		t.volumeLayout.UnRegisterVolume(&v, dn)
 	}
+
+	// 返回主master ip
+	var jmsg operation.JoinMessage
+	return &jmsg
 }
 
 func (t *Topology) ToMap() interface{} {
