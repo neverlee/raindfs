@@ -2,8 +2,9 @@
 
 ## 主体架构
 前端多台master，后端多台volume。
-* master 负责管理集群topo，管理volume信息，分配volume。提供部分客户端功能
+* master 负责管理集群topo，管理volume信息，分配volume。提供客户端接口
 * volume 只做数据存储相关接口，向master汇报
+所有volume相互独立。Master通过raft选举出惟一的leader。Leader Master负责管理集群topo，管理volume信息，分配volume。提供客户端接口。非Leader Master只提供客户端接口。
 
 ## 程序结构
 * git command 式
@@ -11,8 +12,7 @@
 
 ## master
 ### 接口
-* 锁volume
-* 锁volumeServer
+* 锁NodeServer
 * volume heartbeat report报告
 
 ## volume

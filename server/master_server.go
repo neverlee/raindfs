@@ -120,12 +120,13 @@ func (m *MasterServer) assignFileidHandler(w http.ResponseWriter, r *http.Reques
 			Fid: fid.String(),
 		}
 		writeJsonQuiet(w, r, http.StatusOK, ret)
+		return
 	}
 	writeJsonError(w, r, http.StatusOK, err)
 }
 
 func postFile(uri string, fidstr string, r io.Reader, status chan<- error) {
-	url := fmt.Sprintf("http://%s/%s", uri, fidstr)
+	url := fmt.Sprintf("http://%s/admin/put/%s", uri, fidstr)
 	req, err := http.NewRequest("POST", url, r)
 	if err != nil {
 		status <- err
@@ -138,8 +139,11 @@ func postFile(uri string, fidstr string, r io.Reader, status chan<- error) {
 	}
 	if resp.StatusCode == http.StatusOK {
 		status <- nil
+		return
+	} else {
+		status <- fmt.Errorf("Fail") // TODO
+		return
 	}
-	status <- fmt.Errorf("Fail") // TODO
 }
 
 func (m *MasterServer) putHandler(w http.ResponseWriter, r *http.Request) {
@@ -159,6 +163,7 @@ func (m *MasterServer) putHandler(w http.ResponseWriter, r *http.Request) {
 		rs[1], ws[1] = io.Pipe()
 		ww := io.MultiWriter(ws[0], ws[1])
 		c := make(chan error)
+		defer close(c)
 		go postFile(nodes[0].Url(), fidstr, rs[0], c)
 		go postFile(nodes[1].Url(), fidstr, rs[1], c)
 		_, _ = io.Copy(ww, r.Body)
@@ -167,7 +172,6 @@ func (m *MasterServer) putHandler(w http.ResponseWriter, r *http.Request) {
 		if rerr1 == nil && rerr2 == nil {
 			writeJsonQuiet(w, r, http.StatusOK, "Done!")
 		}
-		close(c)
 		return
 	}
 	writeJsonError(w, r, http.StatusOK, fmt.Errorf("Volume is not writable!"))
