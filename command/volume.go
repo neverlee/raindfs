@@ -47,7 +47,6 @@ var cmdVolume = &Command{
 }
 
 func runVolume(cmd *Command, args []string) bool {
-	glog.Extraln("vsopt----------", vsopt)
 	if *vsopt.maxCpu > 0 {
 		runtime.GOMAXPROCS(*vsopt.maxCpu)
 	}

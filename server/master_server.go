@@ -16,7 +16,6 @@ import (
 	"raindfs/util"
 
 	"github.com/gorilla/mux"
-	"github.com/neverlee/glog"
 )
 
 const (
@@ -97,9 +96,8 @@ func (m *MasterServer) testHandler(w http.ResponseWriter, r *http.Request) {
 
 func (m *MasterServer) nodeJoinHandler(w http.ResponseWriter, r *http.Request) {
 	ip, _ := util.Ipport(r.RemoteAddr)
-	glog.Extraln(">>>>>>", ip)
+	//glog.Extraln(">>>>>>", r.RemoteAddr)
 	if blob, err := ioutil.ReadAll(r.Body); err == nil {
-		glog.Extraln(">>>", string(blob))
 		fmt.Fprint(w, string(blob))
 		var jmsg operation.JoinMessage
 		if jerr := json.Unmarshal(blob, &jmsg); jerr == nil {
@@ -157,7 +155,7 @@ func (m *MasterServer) putHandler(w http.ResponseWriter, r *http.Request) {
 	nodes := m.Topo.Lookup(fid.VolumeId)
 	if len(nodes) == 2 { // TODO check writable
 		defer r.Body.Close()
-		var rs [2]io.Reader
+		var rs [2]io.ReadCloser
 		var ws [2]io.Writer
 		rs[0], ws[0] = io.Pipe()
 		rs[1], ws[1] = io.Pipe()
@@ -167,6 +165,8 @@ func (m *MasterServer) putHandler(w http.ResponseWriter, r *http.Request) {
 		go postFile(nodes[0].Url(), fidstr, rs[0], c)
 		go postFile(nodes[1].Url(), fidstr, rs[1], c)
 		_, _ = io.Copy(ww, r.Body)
+		rs[0].Close()
+		rs[1].Close()
 		rerr1 := <-c
 		rerr2 := <-c
 		if rerr1 == nil && rerr2 == nil {

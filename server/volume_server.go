@@ -161,7 +161,7 @@ func (vs *VolumeServer) heartBeat() {
 	connected := true
 
 	for {
-		glog.V(0).Infof("Volume server sending to master ")
+		//glog.V(0).Infof("Volume server sending to master ")
 		master, err := vs.store.SendHeartbeatToMaster()
 		if err == nil {
 			if !connected {
