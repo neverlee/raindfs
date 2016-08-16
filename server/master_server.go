@@ -3,7 +3,9 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"path"
 
@@ -60,8 +62,6 @@ func NewMasterServer(r *mux.Router, port int, metaFolder string, pulseSeconds in
 	r.HandleFunc("/admin/assign_fileid", ms.assignFileidHandler)
 	r.HandleFunc("/admin/put/{fid}", ms.putHandler)
 	r.HandleFunc("/admin/get/{fid}", ms.getHandler)
-	r.HandleFunc("/admin/delete/{fid}", ms.deleteHandler)
-
 
 	r.HandleFunc("/node/join", ms.nodeJoinHandler) // proxy
 	r.HandleFunc("/cluster/status", ms.clusterStatusHandler)
@@ -124,6 +124,24 @@ func (m *MasterServer) assignFileidHandler(w http.ResponseWriter, r *http.Reques
 	writeJsonError(w, r, http.StatusOK, err)
 }
 
+func postFile(uri string, fidstr string, r io.Reader, status chan<- error) {
+	url := fmt.Sprintf("http://%s/%s", uri, fidstr)
+	req, err := http.NewRequest("POST", url, r)
+	if err != nil {
+		status <- err
+		return
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		status <- err
+		return
+	}
+	if resp.StatusCode == http.StatusOK {
+		status <- nil
+	}
+	status <- fmt.Errorf("Fail") // TODO
+}
+
 func (m *MasterServer) putHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	fidstr := vars["fid"]
@@ -132,18 +150,27 @@ func (m *MasterServer) putHandler(w http.ResponseWriter, r *http.Request) {
 		writeJsonError(w, r, http.StatusOK, err)
 		return
 	}
-	volume := vs.store.Location.GetVolume(fid.VolumeId)
-	if volume == nil {
-		writeJsonError(w, r, http.StatusOK, errors.New("No such volume")) // TODO
+	nodes := m.Topo.Lookup(fid.VolumeId)
+	if len(nodes) == 2 { // TODO check writable
+		defer r.Body.Close()
+		var rs [2]io.Reader
+		var ws [2]io.Writer
+		rs[0], ws[0] = io.Pipe()
+		rs[1], ws[1] = io.Pipe()
+		ww := io.MultiWriter(ws[0], ws[1])
+		c := make(chan error)
+		go postFile(nodes[0].Url(), fidstr, rs[0], c)
+		go postFile(nodes[1].Url(), fidstr, rs[1], c)
+		_, _ = io.Copy(ww, r.Body)
+		rerr1 := <-c
+		rerr2 := <-c
+		if rerr1 == nil && rerr2 == nil {
+			writeJsonQuiet(w, r, http.StatusOK, "Done!")
+		}
+		close(c)
 		return
 	}
-	err = volume.SaveFile(fid, r.Body)
-	defer r.Body.Close()
-	if err == nil {
-		writeJsonQuiet(w, r, http.StatusOK, "success")
-		return
-	}
-	writeJsonError(w, r, http.StatusOK, err) // TODO
+	writeJsonError(w, r, http.StatusOK, fmt.Errorf("Volume is not writable!"))
 }
 
 func (m *MasterServer) getHandler(w http.ResponseWriter, r *http.Request) {
@@ -154,32 +181,21 @@ func (m *MasterServer) getHandler(w http.ResponseWriter, r *http.Request) {
 		writeJsonError(w, r, http.StatusOK, err)
 		return
 	}
-	volume := vs.store.Location.GetVolume(fid.VolumeId)
-	if volume == nil {
-		writeJsonError(w, r, http.StatusOK, errors.New("No such volume")) // TODO
-		return
-	}
-	w.Header().Set("Content-Type", "application/octet-stream")
-	if err = volume.LoadFile(fid, w); err != nil {
-		writeJsonError(w, r, http.StatusNotFound, err) // TODO
-	}
-}
 
-func (m *MasterServer) deleteHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	fidstr := vars["fid"]
-	fid, err := storage.ParseFileId(fidstr)
-	if err != nil {
-		writeJsonError(w, r, http.StatusOK, err)
+	nodes := m.Topo.Lookup(fid.VolumeId)
+	if len(nodes) > 0 {
+		node := nodes[rand.Intn(len(nodes))]
+
+		uri := fmt.Sprintf("http://%s/admin/get/%s", node.Url(), fidstr)
+		err := util.GetUrlStream(uri, nil, func(r io.Reader) error {
+			_, err := io.Copy(w, r)
+			return err
+		})
+		if err != nil {
+			writeJsonError(w, r, http.StatusNotFound, fmt.Errorf("No such volume")) // TODO not 200
+		}
 		return
 	}
-	volume := vs.store.Location.GetVolume(fid.VolumeId)
-	ret := operation.DeleteResult{}
-	if volume == nil {
-		ret.Status = 1
-		writeJsonError(w, r, http.StatusOK, errors.New("No such volume")) // TODO
-		return
-	}
-	volume.DeleteFile(fid)
-	writeJsonQuiet(w, r, http.StatusOK, ret) // TODO
+
+	writeJsonError(w, r, http.StatusNotFound, fmt.Errorf("No such volume"))
 }

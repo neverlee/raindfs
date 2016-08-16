@@ -64,7 +64,7 @@ func (t *Topology) UnRegisterDataNode(dn *DataNode) {
 	t.nodemap.UnlinkChildNode(dn.Url())
 }
 
-func (t *Topology) ProcessJoinMessage(joinMessage *operation.JoinMessage) {
+func (t *Topology) ProcessJoinMessage(joinMessage *operation.JoinMessage) *operation.JoinMessage {
 	dn := t.nodemap.FindDataNode(joinMessage.Ip, int(joinMessage.Port))
 	if joinMessage.IsInit && dn != nil {
 		t.UnRegisterDataNode(dn)
