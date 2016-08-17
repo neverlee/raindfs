@@ -175,12 +175,22 @@ func (vl *VolumeLayout) SetVolumeCapacityFull(vid storage.VolumeId) bool {
 	return vl.removeFromWritable(vid)
 }
 
+func (vl *VolumeLayout) CheckVolumes(volumeSizeLimit uint64) {
+	vl.accessLock.Lock()
+	defer vl.accessLock.Unlock()
+
+	for _, vid := range vl.writables {
+		//if uint64(v.Size()) >= volumeSizeLimit
+		//dnm.chanFullVolumes <- v
+	}
+}
+
 func (vl *VolumeLayout) ToMap() map[string]interface{} {
 	m := make(map[string]interface{})
 	m["writables"] = vl.writables
-	svid2loc := make(map[string]*VolumeLocationList, len(vl.vid2location))
+	svid2loc := make(map[string][]*DataNode, len(vl.vid2location))
 	for k, v := range vl.vid2location {
-		svid2loc[k.String()] = v
+		svid2loc[k.String()] = v.ToList()
 	}
 	m["vid2location"] = svid2loc
 	return m

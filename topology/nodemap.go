@@ -12,7 +12,8 @@ type DataNodeMap struct {
 }
 
 func NewDataNodeMap() *DataNodeMap {
-	return &DataNodeMap{nodes: make(map[string]*DataNode)}
+	dnm := &DataNodeMap{nodes: make(map[string]*DataNode)}
+	return dnm
 }
 
 func (dnm *DataNodeMap) LinkChildNode(dn *DataNode) {
@@ -26,10 +27,8 @@ func (dnm *DataNodeMap) LinkChildNode(dn *DataNode) {
 func (dnm *DataNodeMap) UnlinkChildNode(host string) {
 	dnm.mutex.Lock()
 	dnm.mutex.Unlock()
-	node := dnm.nodes[host]
-	if node != nil {
-		delete(dnm.nodes, host)
-	}
+	//删除时不需要判断是否存在 node := dnm.nodes[host] //if node != nil {}
+	delete(dnm.nodes, host)
 }
 
 func (dnm *DataNodeMap) FindDataNode(ip string, port int) *DataNode {
@@ -40,23 +39,42 @@ func (dnm *DataNodeMap) FindDataNode(ip string, port int) *DataNode {
 	return dn
 }
 
-func (dnm *DataNodeMap) GetOrCreateDataNode(ip string, port int, maxVolumeCount int) *DataNode {
+func (dnm *DataNodeMap) GetOrCreateDataNode(ip string, port int, maxVolumeCount int) (*DataNode, bool) {
 	dnm.mutex.Lock()
 	dnm.mutex.Unlock()
 	key := fmt.Sprintf("%s:%d", ip, port)
+	recovered := false
 	if dn, ok := dnm.nodes[key]; ok {
 		dn.LastSeen = time.Now().Unix()
 		if dn.Dead {
 			dn.Dead = false
-			//t.chanRecoveredDataNodes <- dn
+			recovered = true
+			//dnm.chanRecoveredDataNodes <- dn
 		}
-		return dn
+		return dn, recovered
 	}
 
 	dn := NewDataNode(ip, port)
 	dn.LastSeen = time.Now().Unix()
 	dnm.nodes[key] = dn
-	return dn
+	return dn, recovered
+}
+
+func (dnm *DataNodeMap) CollectDeadNode(freshThreshHold int64) []*DataNode {
+	dnm.mutex.Lock()
+	dnm.mutex.Unlock()
+	var dnodes []*DataNode
+	for _, dn := range dnm.nodes {
+		if dn.LastSeen < freshThreshHold {
+			if !dn.Dead {
+				dn.Dead = true
+				dnodes = append(dnodes, dn)
+				// 删除 //dnm.chanDeadDataNodes <- dn
+				delete(dnm.nodes, dn.Url())
+			}
+		}
+	}
+	return dnodes
 }
 
 func (dnm *DataNodeMap) ToMap() []interface{} {

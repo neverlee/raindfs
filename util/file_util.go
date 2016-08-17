@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"os"
+	"path"
 )
 
 func TestFolderWritable(folder string) (err error) {
@@ -48,4 +49,30 @@ func GetFileSize(file *os.File) (size int64, err error) {
 		size = fi.Size()
 	}
 	return
+}
+
+func Dirstat(dir string) (tsize int, tcount int) {
+	size, count := 0, 0
+	f, err := os.Open(dir)
+	defer f.Close()
+	if err != nil {
+		return 0, 0
+	}
+	for {
+		if list, err := f.Readdir(40); err == nil {
+			for _, v := range list {
+				if v.IsDir() {
+					csize, ccount := Dirstat(path.Join(dir, v.Name()))
+					size += csize
+					count += ccount
+				} else {
+					size += int(v.Size())
+					count++
+				}
+			}
+		} else {
+			break
+		}
+	}
+	return size, count
 }

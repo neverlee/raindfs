@@ -71,6 +71,8 @@ func NewMasterServer(r *mux.Router, port int, metaFolder string, pulseSeconds in
 
 	r.HandleFunc("/test", ms.testHandler)
 
+	ms.Topo.StartRefreshWritableVolumes()
+
 	return ms
 }
 

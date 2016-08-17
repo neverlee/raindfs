@@ -2,9 +2,12 @@ package topology
 
 import (
 	"fmt"
+
+	"raindfs/storage"
 )
 
 type VolumeLocationList struct {
+	info *storage.VolumeInfo
 	list []*DataNode
 }
 
@@ -46,6 +49,10 @@ func (dnll *VolumeLocationList) Remove(loc *DataNode) bool {
 		}
 	}
 	return false
+}
+
+func (dnll *VolumeLocationList) ToList() []*DataNode {
+	return dnll.list[:]
 }
 
 //func (dnll *VolumeLocationList) Refresh(freshThreshHold int64) {

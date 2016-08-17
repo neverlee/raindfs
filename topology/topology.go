@@ -1,6 +1,9 @@
 package topology
 
 import (
+	"math/rand"
+	"time"
+
 	"raindfs/operation"
 	"raindfs/sequence"
 	"raindfs/storage"
@@ -15,7 +18,7 @@ type Topology struct {
 	pulse    int
 	Sequence *sequence.Sequencer
 
-	chanDeadDataNodes      chan *DataNode
+	//chanDeadDataNodes      chan *DataNode
 	chanRecoveredDataNodes chan *DataNode
 	chanFullVolumes        chan storage.VolumeInfo
 }
@@ -28,11 +31,38 @@ func NewTopology(seq *sequence.Sequencer, pulse int) *Topology {
 	t.nodemap = NewDataNodeMap()
 	t.volumeLayout = NewVolumeLayout()
 
-	t.chanDeadDataNodes = make(chan *DataNode)
 	t.chanRecoveredDataNodes = make(chan *DataNode)
 	t.chanFullVolumes = make(chan storage.VolumeInfo)
 
 	return t
+}
+
+func (t *Topology) IsLeader() bool {
+	return true
+}
+
+func (t *Topology) StartRefreshWritableVolumes() {
+	go func() {
+		for {
+			if t.IsLeader() {
+				freshThreshHold := time.Now().Unix() - int64(3*t.pulse) //3 times of sleep interval
+				t.nodemap.CollectDeadNode(freshThreshHold)
+			}
+			time.Sleep(time.Duration(float32(t.pulse*1e3)*(1+rand.Float32())) * time.Millisecond)
+		}
+	}()
+	//go func() {
+	//	c := time.Tick(15 * time.Minute)
+	//	for _ = range c { if t.IsLeader() { t.Vacuum() } }
+	//}()
+	//	for {
+	//		select {
+	//		case v := <-t.chanFullVolumes:
+	//			t.SetVolumeCapacityFull(v)
+	//		case dn := <-t.chanRecoveredDataNodes:
+	//			t.RegisterRecoveredDataNode(dn)
+	//		}
+	//	}
 }
 
 func (t *Topology) Lookup(vid storage.VolumeId) []*DataNode {
@@ -56,6 +86,14 @@ func (t *Topology) PickForWrite() (storage.VolumeId, *VolumeLocationList, error)
 	//	return storage.NewFileId(*vid, fileId, rand.Uint32()).String(), count, datanodes.Head(), nil
 }
 
+func (t *Topology) RegisterRecoveredDataNode(dn *DataNode) {
+	for _, v := range dn.GetVolumes() {
+		if t.volumeLayout.isWritable(&v) {
+			t.volumeLayout.SetVolumeAvailable(dn, v.Id)
+		}
+	}
+}
+
 func (t *Topology) UnRegisterDataNode(dn *DataNode) {
 	for _, v := range dn.GetVolumes() {
 		glog.V(0).Infoln("Removing Volume", v.Id, "from the dead volume server", dn)
@@ -69,7 +107,9 @@ func (t *Topology) ProcessJoinMessage(joinMessage *operation.JoinMessage) *opera
 	if joinMessage.IsInit && dn != nil {
 		t.UnRegisterDataNode(dn)
 	}
-	dn = t.nodemap.GetOrCreateDataNode(joinMessage.Ip, int(joinMessage.Port), int(joinMessage.MaxVolumeCount))
+	// 处理reconvered
+	dn, _ = t.nodemap.GetOrCreateDataNode(joinMessage.Ip, int(joinMessage.Port), int(joinMessage.MaxVolumeCount))
+
 	var volumeInfos []storage.VolumeInfo
 	for _, v := range joinMessage.Volumes {
 		vi := *storage.NewVolumeInfo(v)
