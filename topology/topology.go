@@ -1,12 +1,14 @@
 package topology
 
 import (
+	"errors"
 	"math/rand"
 	"time"
 
 	"raindfs/operation"
 	"raindfs/sequence"
 	"raindfs/storage"
+	"raindfs/util"
 
 	"github.com/neverlee/glog"
 )
@@ -79,15 +81,28 @@ func (t *Topology) HasWritableVolume() bool {
 }
 
 func (t *Topology) PickForWrite() (storage.VolumeId, *VolumeLocationList, error) {
-	return t.volumeLayout.PickForWrite()
-	//if vid, datanodes, err := t.volumeLayout.PickForWrite(); err == nil {
-	//	return vid, datanodes, err
-	//}
-	//wnodes := t.nodemap.GetWritableNodes()
-	//if wnodes >= replicate {
-	//	idx := util.RandTwo()
-	//	_, nvid := t.Sequence.NextId(1)
-	//}
+	//return t.volumeLayout.PickForWrite()
+	if vid, datanodes, err := t.volumeLayout.PickForWrite(); err == nil {
+		return vid, datanodes, err
+	}
+	wnodes := t.nodemap.GetWritableNodes()
+	if len(wnodes) >= replicate {
+		idx := util.RandTwo(len(wnodes))
+		ivid, _ := t.Sequence.NextId(1)
+		vid := storage.VolumeId(ivid)
+		var nodelist []*DataNode
+		for _, id := range idx {
+			vinfo, aerr := wnodes[id].AssignVolume(vid)
+			if aerr != nil {
+				return 0, nil, aerr
+			}
+			t.volumeLayout.RegisterVolume(vinfo, wnodes[id])
+			nodelist = append(nodelist, wnodes[id])
+		}
+		loc := &VolumeLocationList{list: nodelist}
+		return vid, loc, nil
+	}
+	return 0, nil, errors.New("No writable node")
 }
 
 func (t *Topology) RegisterRecoveredDataNode(dn *DataNode) {

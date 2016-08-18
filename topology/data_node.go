@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"sync"
 
+	"raindfs/operation"
 	"raindfs/storage"
 
 	"github.com/neverlee/glog"
@@ -90,6 +91,26 @@ func (dn *DataNode) MatchLocation(ip string, port int) bool {
 func (dn *DataNode) Url() string {
 	// ip and port 固定
 	return dn.ip + ":" + strconv.Itoa(dn.port)
+}
+
+func (dn *DataNode) AssignVolume(vid storage.VolumeId) (*storage.VolumeInfo, error) {
+	err := operation.AssignVolume(dn.Url(), vid.String())
+	if err == nil {
+		dn.mutex.RLock()
+		defer dn.mutex.RUnlock()
+		vi := storage.VolumeInfo{
+			Id:               vid,
+			Size:             0,
+			FileCount:        0,
+			DeleteCount:      0,
+			DeletedByteCount: 0,
+			ReadOnly:         false,
+			//Uptime:,
+		}
+		dn.AddOrUpdateVolume(vi)
+		return &vi, nil
+	}
+	return nil, err
 }
 
 func (dn *DataNode) ToMap() interface{} {

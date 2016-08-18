@@ -179,10 +179,10 @@ func (vl *VolumeLayout) CheckVolumes(volumeSizeLimit uint64) {
 	vl.accessLock.Lock()
 	defer vl.accessLock.Unlock()
 
-	for _, loc := range vl.vid2location {
-		//if uint64(v.Size()) >= volumeSizeLimit
-		//dnm.chanFullVolumes <- v
-	}
+	///for _, loc := range vl.vid2location {
+	//if uint64(v.Size()) >= volumeSizeLimit
+	//dnm.chanFullVolumes <- v
+	//}
 }
 
 func (vl *VolumeLayout) ToMap() map[string]interface{} {
