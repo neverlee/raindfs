@@ -1,10 +1,11 @@
 package storage
 
 import (
-	"fmt"
-	"sort"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"os"
+	"sort"
 
 	"raindfs/operation"
 )
@@ -49,9 +50,12 @@ func (vi *VolumeInfo) dump(path string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(path, blob, 0644)
+	newpath := path + "_new"
+	if err = ioutil.WriteFile(newpath, blob, 0644); err != nil {
+		return err
+	}
+	return os.Rename(newpath, path)
 }
-
 
 /*VolumesInfo sorting*/
 

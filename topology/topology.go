@@ -19,8 +19,8 @@ type Topology struct {
 	Sequence *sequence.Sequencer
 
 	//chanDeadDataNodes      chan *DataNode
-	chanRecoveredDataNodes chan *DataNode
-	chanFullVolumes        chan storage.VolumeInfo
+	//chanRecoveredDataNodes chan *DataNode
+	//chanFullVolumes        chan storage.VolumeInfo
 }
 
 func NewTopology(seq *sequence.Sequencer, pulse int) *Topology {
@@ -31,8 +31,8 @@ func NewTopology(seq *sequence.Sequencer, pulse int) *Topology {
 	t.nodemap = NewDataNodeMap()
 	t.volumeLayout = NewVolumeLayout()
 
-	t.chanRecoveredDataNodes = make(chan *DataNode)
-	t.chanFullVolumes = make(chan storage.VolumeInfo)
+	//t.chanRecoveredDataNodes = make(chan *DataNode)
+	//t.chanFullVolumes = make(chan storage.VolumeInfo)
 
 	return t
 }
@@ -55,14 +55,14 @@ func (t *Topology) StartRefreshWritableVolumes() {
 	//	c := time.Tick(15 * time.Minute)
 	//	for _ = range c { if t.IsLeader() { t.Vacuum() } }
 	//}()
-	//	for {
-	//		select {
-	//		case v := <-t.chanFullVolumes:
-	//			t.SetVolumeCapacityFull(v)
-	//		case dn := <-t.chanRecoveredDataNodes:
-	//			t.RegisterRecoveredDataNode(dn)
-	//		}
+	//for {
+	//	select {
+	//	case v := <-t.chanFullVolumes:
+	//		t.SetVolumeCapacityFull(v)
+	//	case dn := <-t.chanRecoveredDataNodes:
+	//		t.RegisterRecoveredDataNode(dn)
 	//	}
+	//}
 }
 
 func (t *Topology) Lookup(vid storage.VolumeId) []*DataNode {
@@ -79,11 +79,15 @@ func (t *Topology) HasWritableVolume() bool {
 }
 
 func (t *Topology) PickForWrite() (storage.VolumeId, *VolumeLocationList, error) {
-	//vid, datanodes, err := t.volumeLayout.PickForWrite()
 	return t.volumeLayout.PickForWrite()
-	//if err != nil || datanodes.Length() == 0 { }
-	//	fileId, count := t.Sequence.NextFileId(count)
-	//	return storage.NewFileId(*vid, fileId, rand.Uint32()).String(), count, datanodes.Head(), nil
+	//if vid, datanodes, err := t.volumeLayout.PickForWrite(); err == nil {
+	//	return vid, datanodes, err
+	//}
+	//wnodes := t.nodemap.GetWritableNodes()
+	//if wnodes >= replicate {
+	//	idx := util.RandTwo()
+	//	_, nvid := t.Sequence.NextId(1)
+	//}
 }
 
 func (t *Topology) RegisterRecoveredDataNode(dn *DataNode) {
@@ -108,7 +112,8 @@ func (t *Topology) ProcessJoinMessage(joinMessage *operation.JoinMessage) *opera
 		t.UnRegisterDataNode(dn)
 	}
 	// 处理reconvered
-	dn, _ = t.nodemap.GetOrCreateDataNode(joinMessage.Ip, int(joinMessage.Port), int(joinMessage.MaxVolumeCount))
+	dn = t.nodemap.GetOrCreateDataNode(joinMessage.Ip, int(joinMessage.Port), int(joinMessage.MaxVolumeCount))
+	dn.SetFreeSpace(int(joinMessage.FreeSpace))
 
 	var volumeInfos []storage.VolumeInfo
 	for _, v := range joinMessage.Volumes {

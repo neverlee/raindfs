@@ -15,6 +15,7 @@ type JoinMessage struct {
 	Port           uint32                      `json:"port"`
 	MaxVolumeCount uint32                      `json:"max_volume_count"`
 	Volumes        []*VolumeInformationMessage `json:"volumes"`
+	FreeSpace      uint64                      `json:"free_space"`
 }
 
 type JoinResult struct {

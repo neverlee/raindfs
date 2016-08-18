@@ -39,25 +39,37 @@ func (dnm *DataNodeMap) FindDataNode(ip string, port int) *DataNode {
 	return dn
 }
 
-func (dnm *DataNodeMap) GetOrCreateDataNode(ip string, port int, maxVolumeCount int) (*DataNode, bool) {
+func (dnm *DataNodeMap) GetOrCreateDataNode(ip string, port int, maxVolumeCount int) *DataNode {
 	dnm.mutex.Lock()
 	dnm.mutex.Unlock()
 	key := fmt.Sprintf("%s:%d", ip, port)
-	recovered := false
 	if dn, ok := dnm.nodes[key]; ok {
 		dn.LastSeen = time.Now().Unix()
 		if dn.Dead {
 			dn.Dead = false
-			recovered = true
 			//dnm.chanRecoveredDataNodes <- dn
 		}
-		return dn, recovered
+		return dn
 	}
 
 	dn := NewDataNode(ip, port)
 	dn.LastSeen = time.Now().Unix()
 	dnm.nodes[key] = dn
-	return dn, recovered
+	return dn
+}
+
+func (dnm *DataNodeMap) GetWritableNodes() []*DataNode {
+	dnm.mutex.Lock()
+	dnm.mutex.Unlock()
+	nodes := make([]*DataNode, len(dnm.nodes))
+	i := 0
+	for _, dn := range dnm.nodes {
+		if !dn.Dead { // 不是dead并且无故障，有空间
+			nodes[i] = dn
+			i++
+		}
+	}
+	return nodes[:i]
 }
 
 func (dnm *DataNodeMap) CollectDeadNode(freshThreshHold int64) []*DataNode {

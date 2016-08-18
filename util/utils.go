@@ -2,6 +2,7 @@ package util
 
 import (
 	"encoding/binary"
+	"math/rand"
 	"strconv"
 	"strings"
 
@@ -20,4 +21,13 @@ func Ipport(ipport string) (string, int) {
 
 func GenID() uint64 {
 	return binary.LittleEndian.Uint64(uuid.NewV4().Bytes())
+}
+
+func RandTwo(n int) []int {
+	a := rand.Intn(n)
+	b := rand.Intn(n - 1)
+	if b >= a {
+		b++
+	}
+	return []int{a, b}
 }

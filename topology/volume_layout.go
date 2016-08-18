@@ -179,7 +179,7 @@ func (vl *VolumeLayout) CheckVolumes(volumeSizeLimit uint64) {
 	vl.accessLock.Lock()
 	defer vl.accessLock.Unlock()
 
-	for _, vid := range vl.writables {
+	for _, loc := range vl.vid2location {
 		//if uint64(v.Size()) >= volumeSizeLimit
 		//dnm.chanFullVolumes <- v
 	}

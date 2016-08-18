@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"raindfs/operation"
+	"raindfs/stats"
 	"raindfs/util"
 
 	"github.com/neverlee/glog"
@@ -127,12 +128,14 @@ func (s *Store) SendHeartbeatToMaster() (masterNode string, e error) {
 		volumeMessages = append(volumeMessages, volumeMessage)
 	}
 
+	diskStatus := stats.NewDiskStatus(s.Location.Directory())
 	joinMessage := &operation.JoinMessage{
 		IsInit:         !s.connected,
 		Ip:             s.Ip,
 		Port:           uint32(s.Port),
 		MaxVolumeCount: uint32(maxVolumeCount),
 		Volumes:        volumeMessages,
+		FreeSpace:      diskStatus.Free,
 	}
 
 	data, err := json.Marshal(joinMessage)

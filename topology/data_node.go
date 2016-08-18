@@ -17,6 +17,7 @@ type DataNode struct {
 
 	volumeCount       int
 	activeVolumeCount int
+	freeSpace         int
 
 	volumes  map[storage.VolumeId]storage.VolumeInfo
 	LastSeen int64 // unix time in seconds
@@ -40,11 +41,20 @@ func (dn *DataNode) String() string {
 func (dn *DataNode) AddOrUpdateVolume(v storage.VolumeInfo) {
 	dn.mutex.RLock()
 	defer dn.mutex.RUnlock()
-	if _, ok := dn.volumes[v.Id]; !ok {
-		dn.volumes[v.Id] = v
-	} else {
-		dn.volumes[v.Id] = v
-	}
+	dn.volumes[v.Id] = v
+	//if _, ok := dn.volumes[v.Id]; !ok {dn.volumes[v.Id] = v }
+}
+
+func (dn *DataNode) SetFreeSpace(fs int) {
+	dn.mutex.RLock()
+	defer dn.mutex.RUnlock()
+	dn.freeSpace = fs
+}
+
+func (dn *DataNode) FreeSpace() int {
+	dn.mutex.RLock()
+	defer dn.mutex.RUnlock()
+	return dn.freeSpace
 }
 
 func (dn *DataNode) UpdateVolumes(actualVolumes []storage.VolumeInfo) (deletedVolumes []storage.VolumeInfo) {

@@ -3,6 +3,7 @@ package sequence
 import (
 	"encoding/json"
 	"io/ioutil"
+	"os"
 	"sync"
 )
 
@@ -22,11 +23,17 @@ func (s *Sequencer) load() error {
 }
 
 func (s *Sequencer) dump() error {
+	path := s.file
 	blob, err := json.Marshal(s)
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(s.file, blob, 0644)
+
+	newpath := path + "_new"
+	if err = ioutil.WriteFile(newpath, blob, 0644); err != nil {
+		return err
+	}
+	return os.Rename(newpath, path)
 }
 
 func NewSequencer(path string) (m *Sequencer) {
