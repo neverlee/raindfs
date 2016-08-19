@@ -61,16 +61,6 @@ func (vl *VolumeLayout) UnRegisterVolume(v *storage.VolumeInfo, dn *DataNode) {
 	delete(vl.vid2location, v.Id)
 }
 
-func (vl *VolumeLayout) addToWritable(vid storage.VolumeId) bool {
-	for _, id := range vl.writables {
-		if vid == id {
-			return false
-		}
-	}
-	vl.writables = append(vl.writables, vid)
-	return true
-}
-
 func (vl *VolumeLayout) isWritable(v *storage.VolumeInfo) bool {
 	// TODO datanode is not dead, and volume >= 2
 	return true
@@ -118,6 +108,16 @@ func (vl *VolumeLayout) GetActiveVolumeCount() int {
 	return len(vl.writables)
 }
 
+func (vl *VolumeLayout) addToWritable(vid storage.VolumeId) bool {
+	for _, id := range vl.writables {
+		if vid == id {
+			return false
+		}
+	}
+	vl.writables = append(vl.writables, vid)
+	return true
+}
+
 func (vl *VolumeLayout) removeFromWritable(vid storage.VolumeId) bool {
 	toDeleteIndex := -1
 	for k, id := range vl.writables {
@@ -132,16 +132,6 @@ func (vl *VolumeLayout) removeFromWritable(vid storage.VolumeId) bool {
 		return true
 	}
 	return false
-}
-func (vl *VolumeLayout) setVolumeWritable(vid storage.VolumeId) bool {
-	for _, v := range vl.writables {
-		if v == vid {
-			return false
-		}
-	}
-	glog.V(0).Infoln("Volume", vid, "becomes writable")
-	vl.writables = append(vl.writables, vid)
-	return true
 }
 
 func (vl *VolumeLayout) SetVolumeUnavailable(dn *DataNode, vid storage.VolumeId) bool {
@@ -164,7 +154,7 @@ func (vl *VolumeLayout) SetVolumeAvailable(dn *DataNode, vid storage.VolumeId) b
 
 	vl.vid2location[vid].Set(dn)
 	if vl.vid2location[vid].Length() >= replicate {
-		return vl.setVolumeWritable(vid)
+		return vl.addToWritable(vid)
 	}
 	return false
 }
