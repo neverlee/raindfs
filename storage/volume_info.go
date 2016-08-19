@@ -14,8 +14,6 @@ type VolumeInfo struct {
 	Id               VolumeId
 	Size             uint64
 	FileCount        int
-	DeleteCount      int
-	DeletedByteCount uint64
 	ReadOnly         bool
 	Uptime           uint64
 }
@@ -25,16 +23,13 @@ func NewVolumeInfo(vim *operation.VolumeInformationMessage) *VolumeInfo {
 		Id:               VolumeId(vim.Id),
 		Size:             uint64(vim.Size),
 		FileCount:        int(vim.FileCount),
-		DeleteCount:      int(vim.DeleteCount),
-		DeletedByteCount: uint64(vim.DeletedByteCount),
 		ReadOnly:         vim.ReadOnly,
 	}
 	return vi
 }
 
 func (vi VolumeInfo) String() string {
-	return fmt.Sprintf("Id:%d, Size:%d, FileCount:%d, DeleteCount:%d, DeletedByteCount:%d",
-		vi.Id, vi.Size, vi.FileCount, vi.DeleteCount, vi.DeletedByteCount)
+	return fmt.Sprintf("Id:%d, Size:%d, FileCount:%d", vi.Id, vi.Size, vi.FileCount)
 }
 
 func (vi *VolumeInfo) load(path string) error {

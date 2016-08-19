@@ -102,8 +102,6 @@ func (dn *DataNode) AssignVolume(vid storage.VolumeId) (*storage.VolumeInfo, err
 			Id:               vid,
 			Size:             0,
 			FileCount:        0,
-			DeleteCount:      0,
-			DeletedByteCount: 0,
 			ReadOnly:         false,
 			//Uptime:,
 		}

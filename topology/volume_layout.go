@@ -61,13 +61,14 @@ func (vl *VolumeLayout) UnRegisterVolume(v *storage.VolumeInfo, dn *DataNode) {
 	delete(vl.vid2location, v.Id)
 }
 
-func (vl *VolumeLayout) addToWritable(vid storage.VolumeId) {
+func (vl *VolumeLayout) addToWritable(vid storage.VolumeId) bool {
 	for _, id := range vl.writables {
 		if vid == id {
-			return
+			return false
 		}
 	}
 	vl.writables = append(vl.writables, vid)
+	return true
 }
 
 func (vl *VolumeLayout) isWritable(v *storage.VolumeInfo) bool {
@@ -172,6 +173,7 @@ func (vl *VolumeLayout) SetVolumeCapacityFull(vid storage.VolumeId) bool {
 	vl.accessLock.Lock()
 	defer vl.accessLock.Unlock()
 
+	vl.oversizedVolumes[vid] = true
 	return vl.removeFromWritable(vid)
 }
 

@@ -121,8 +121,6 @@ func (s *Store) SendHeartbeatToMaster() (masterNode string, e error) {
 			Id:               uint32(v.Id),
 			Size:             uint64(vinfo.Size),
 			FileCount:        uint64(vinfo.FileCount),
-			DeleteCount:      uint64(vinfo.DeleteCount),
-			DeletedByteCount: vinfo.DeletedByteCount,
 			ReadOnly:         vinfo.ReadOnly,
 		}
 		volumeMessages = append(volumeMessages, volumeMessage)
