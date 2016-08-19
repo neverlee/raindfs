@@ -25,7 +25,7 @@ type Volume struct {
 	dir string
 
 	mutex sync.Mutex
-	Info VolumeInfo
+	Info  VolumeInfo
 }
 
 func NewVolume(dirname string, id VolumeId) (*Volume, error) {
@@ -50,6 +50,14 @@ func (v *Volume) GetInfo() VolumeInfo {
 	v.mutex.Lock()
 	defer v.mutex.Unlock()
 	return v.Info
+}
+
+func (v *Volume) GetStat() (os.FileInfo, error) {
+	return os.Stat(v.dir)
+}
+
+func (v *Volume) Directory() string {
+	return v.dir
 }
 
 func (v *Volume) MetaPath() string {

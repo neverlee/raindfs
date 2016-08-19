@@ -2,8 +2,10 @@ package server
 
 import (
 	"errors"
+	"fmt"
 	"math/rand"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -39,6 +41,8 @@ func NewVolumeServer(ip string, port int, data string, masters string, r *mux.Ro
 	r.HandleFunc("/admin/put/{fid}", vs.putHandler)
 	r.HandleFunc("/admin/get/{fid}", vs.getHandler)
 	r.HandleFunc("/admin/delete/{fid}", vs.deleteHandler)
+	r.HandleFunc("/admin/getvinfo/{vid}", vs.getVolumeInfoHandler)
+	r.HandleFunc("/admin/getvfiles/{vid}", vs.getVolumeFilesHandler)
 	r.HandleFunc("/stats/counter", statsCounterHandler)
 	r.HandleFunc("/stats/memory", statsMemoryHandler)
 	r.HandleFunc("/stats/disk", vs.statsDiskHandler)
@@ -155,6 +159,67 @@ func (vs *VolumeServer) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	volume.DeleteFile(fid)
 	writeJsonQuiet(w, r, http.StatusOK, ret) // TODO
+}
+func (vs *VolumeServer) getVolumeInfoHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	vidstr := vars["vid"]
+
+	vid, err := storage.NewVolumeId(vidstr)
+	if err != nil {
+		writeJsonError(w, r, http.StatusOK, err) // TODO
+		return
+	}
+
+	volume := vs.store.Location.GetVolume(vid)
+	if volume == nil {
+		writeJsonError(w, r, http.StatusOK, errors.New("No such volume")) // TODO
+		return
+	}
+	stat, err := volume.GetStat()
+	if err != nil {
+		writeJsonError(w, r, http.StatusOK, err) // TODO
+		return
+	}
+	ret := struct{ ModTime int64 }{
+		ModTime: stat.ModTime().Unix(),
+	}
+	writeJsonQuiet(w, r, http.StatusOK, ret) // TODO
+}
+
+func (vs *VolumeServer) getVolumeFilesHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	vidstr := vars["vid"]
+
+	vid, err := storage.NewVolumeId(vidstr)
+	if err != nil {
+		writeJsonError(w, r, http.StatusOK, err) // TODO
+		return
+	}
+
+	volume := vs.store.Location.GetVolume(vid)
+	if volume == nil {
+		writeJsonError(w, r, http.StatusOK, errors.New("No such volume")) // TODO
+		return
+	}
+
+	dir := volume.Directory()
+	fdir, err := os.Open(dir)
+	if err != nil {
+		writeJsonError(w, r, http.StatusOK, errors.New("No such volume")) // TODO
+		return
+	}
+	defer fdir.Close()
+	for {
+		dlist, err := fdir.Readdir(40)
+		if err != nil {
+			break
+		}
+		for _, di := range dlist {
+			if !di.IsDir() {
+				fmt.Fprintln(w, di.Size(), di.ModTime().Unix(), di.Name())
+			}
+		}
+	}
 }
 
 func (vs *VolumeServer) heartBeat() {

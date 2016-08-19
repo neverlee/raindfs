@@ -7,7 +7,6 @@ import (
 )
 
 type VolumeLocationList struct {
-	info *storage.VolumeInfo
 	list []*DataNode
 }
 
