@@ -101,7 +101,7 @@ func (vl *VolumeLayout) PickForWrite() (storage.VolumeId, *VolumeLocationList, e
 	return vid, loc, nil
 }
 
-func (vl *VolumeLayout) GetActiveVolumeCount() int {
+func (vl *VolumeLayout) ActiveVolumeCount() int {
 	vl.accessLock.RLock()
 	defer vl.accessLock.RUnlock()
 
@@ -109,6 +109,7 @@ func (vl *VolumeLayout) GetActiveVolumeCount() int {
 }
 
 func (vl *VolumeLayout) addToWritable(vid storage.VolumeId) bool {
+	defer vl.vid2location[vid].SetWritableVolume(vid)
 	for _, id := range vl.writables {
 		if vid == id {
 			return false
@@ -119,6 +120,7 @@ func (vl *VolumeLayout) addToWritable(vid storage.VolumeId) bool {
 }
 
 func (vl *VolumeLayout) removeFromWritable(vid storage.VolumeId) bool {
+	defer vl.vid2location[vid].DelWritableVolume(vid)
 	toDeleteIndex := -1
 	for k, id := range vl.writables {
 		if id == vid {

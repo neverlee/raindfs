@@ -18,6 +18,18 @@ func (dnll *VolumeLocationList) String() string {
 	return fmt.Sprintf("%v", dnll.list)
 }
 
+func (dull *VolumeLocationList) SetWritableVolume(vid storage.VolumeId) {
+	for _, dn := range dull.list {
+		dn.SetWritableVolume(vid)
+	}
+}
+
+func (dull *VolumeLocationList) DelWritableVolume(vid storage.VolumeId) {
+	for _, dn := range dull.list {
+		dn.DelWritableVolume(vid)
+	}
+}
+
 func (dnll *VolumeLocationList) Head() *DataNode {
 	//mark first node as master volume
 	if len(dnll.list) > 0 {

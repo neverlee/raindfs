@@ -16,11 +16,11 @@ type DataNode struct {
 	ip   string
 	port int
 
-	volumeCount       int
-	activeVolumeCount int
-	freeSpace         int
+	//volumeCount       int 	activeVolumeCount int
+	freeSpace int
 
 	volumes  map[storage.VolumeId]storage.VolumeInfo
+	writable map[storage.VolumeId]struct{}
 	LastSeen int64 // unix time in seconds
 	Dead     bool  // TODO 状态，enable，dead，close
 
@@ -30,6 +30,7 @@ type DataNode struct {
 func NewDataNode(ip string, port int) *DataNode {
 	s := &DataNode{ip: ip, port: port}
 	s.volumes = make(map[storage.VolumeId]storage.VolumeInfo)
+	s.writable = make(map[storage.VolumeId]struct{})
 	return s
 }
 
@@ -37,6 +38,30 @@ func (dn *DataNode) String() string {
 	dn.mutex.RLock()
 	defer dn.mutex.RUnlock()
 	return fmt.Sprintf("Node> volumes:%v, Ip:%s, Port:%d, Dead:%v", dn.volumes, dn.ip, dn.port, dn.Dead)
+}
+
+func (dn *DataNode) VolumeCount() int {
+	dn.mutex.RLock()
+	defer dn.mutex.RUnlock()
+	return len(dn.volumes)
+}
+
+func (dn *DataNode) WritableVolumeCount() int {
+	dn.mutex.RLock()
+	defer dn.mutex.RUnlock()
+	return len(dn.writable)
+}
+
+func (dn *DataNode) SetWritableVolume(id storage.VolumeId) {
+	dn.mutex.RLock()
+	defer dn.mutex.RUnlock()
+	dn.writable[id] = struct{}{}
+}
+
+func (dn *DataNode) DelWritableVolume(id storage.VolumeId) {
+	dn.mutex.RLock()
+	defer dn.mutex.RUnlock()
+	delete(dn.writable, id)
 }
 
 func (dn *DataNode) AddOrUpdateVolume(v storage.VolumeInfo) {
@@ -89,7 +114,7 @@ func (dn *DataNode) MatchLocation(ip string, port int) bool {
 }
 
 func (dn *DataNode) Url() string {
-	// ip and port 固定
+	// ip and port 固定，不需加锁
 	return dn.ip + ":" + strconv.Itoa(dn.port)
 }
 
@@ -99,10 +124,10 @@ func (dn *DataNode) AssignVolume(vid storage.VolumeId) (*storage.VolumeInfo, err
 		dn.mutex.RLock()
 		defer dn.mutex.RUnlock()
 		vi := storage.VolumeInfo{
-			Id:               vid,
-			Size:             0,
-			FileCount:        0,
-			ReadOnly:         false,
+			Id:        vid,
+			Size:      0,
+			FileCount: 0,
+			ReadOnly:  false,
 			//Uptime:,
 		}
 		dn.AddOrUpdateVolume(vi)

@@ -77,7 +77,7 @@ func (t *Topology) NextVolumeId() storage.VolumeId {
 }
 
 func (t *Topology) HasWritableVolume() bool {
-	return t.volumeLayout.GetActiveVolumeCount() > 0
+	return t.volumeLayout.ActiveVolumeCount() > 0
 }
 
 func (t *Topology) PickForWrite() (storage.VolumeId, *VolumeLocationList, error) {
