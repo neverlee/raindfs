@@ -12,11 +12,10 @@ import (
 )
 
 type DataNode struct {
-	//id                string
+	//id  string volumeCount int activeVolumeCount int
 	ip   string
 	port int
 
-	//volumeCount       int 	activeVolumeCount int
 	freeSpace int
 
 	volumes  map[storage.VolumeId]storage.VolumeInfo
