@@ -44,6 +44,7 @@ func (t *Topology) IsLeader() bool {
 }
 
 func (t *Topology) StartRefreshWritableVolumes() {
+	glog.V(0).Infoln("StartRefreshWritableVolumes")
 	go func() {
 		for {
 			if t.IsLeader() {
@@ -53,6 +54,27 @@ func (t *Topology) StartRefreshWritableVolumes() {
 			time.Sleep(time.Duration(float32(t.pulse*1e3)*(1+rand.Float32())) * time.Millisecond)
 		}
 	}()
+	go func() {
+		for {
+			if t.IsLeader() {
+				nodes := t.nodemap.CollectNodeNeedNewVolume()
+				for i := 0; i < len(nodes); i += 2 {
+					ivid, _ := t.Sequence.NextId(1)
+					vid := storage.VolumeId(ivid)
+					if ainfo, aerr := nodes[i].AssignVolume(vid); aerr == nil {
+						glog.V(0).Infoln("Assign New Volume", vid, nodes[i].Url(), ainfo, aerr)
+						t.volumeLayout.RegisterVolume(ainfo, nodes[i])
+					}
+					if binfo, berr := nodes[i+1].AssignVolume(vid); berr == nil {
+						glog.V(0).Infoln("Assign New Volume", vid, nodes[i+1].Url(), binfo, berr)
+						t.volumeLayout.RegisterVolume(binfo, nodes[i+1])
+					}
+				}
+			}
+			time.Sleep(time.Duration(float32(t.pulse*1e3)*(1+rand.Float32())) * time.Millisecond)
+		}
+	}()
+
 	//go func() {
 	//	c := time.Tick(15 * time.Minute)
 	//	for _ = range c { if t.IsLeader() { t.Vacuum() } }

@@ -2,6 +2,7 @@ package sequence
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"sync"
@@ -40,7 +41,13 @@ func NewSequencer(path string) (m *Sequencer) {
 	s := &Sequencer{Counter: 0, file: path}
 	s.load()
 	s.dump()
-	return
+	return s
+}
+
+func (m *Sequencer) String() string {
+	m.sequenceLock.Lock()
+	defer m.sequenceLock.Unlock()
+	return fmt.Sprintf("Squence: <%s> %d", m.file, m.Counter)
 }
 
 func (m *Sequencer) NextId(count uint32) (uint32, uint32) {

@@ -16,6 +16,7 @@ import (
 	"raindfs/util"
 
 	"github.com/gorilla/mux"
+	"github.com/neverlee/glog"
 )
 
 const (
@@ -44,6 +45,7 @@ func NewMasterServer(r *mux.Router, port int, metaFolder string, pulseSeconds in
 		router:       r,
 	}
 	seq := sequence.NewSequencer(path.Join(metaFolder, seqFileName)) // setMax
+	glog.V(4).Infoln("Sequence:", seq)
 	ms.Topo = topology.NewTopology(seq, ms.pulseSeconds)
 
 	//r.HandleFunc("/", ms.uiStatusHandler) r.HandleFunc("/ui/index.html", ms.uiStatusHandler)

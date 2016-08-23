@@ -2,9 +2,9 @@ package topology
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 	"time"
-	"sort"
 )
 
 type DataNodeMap struct {
@@ -91,9 +91,10 @@ func (dnm *DataNodeMap) CollectDeadNode(freshThreshHold int64) []*DataNode {
 }
 
 type sortWritableNodes struct {
-	nodes []*DataNode
+	nodes    []*DataNode
 	writable []int
 }
+
 func (sn sortWritableNodes) Len() int {
 	return len(sn.writable)
 }
@@ -108,14 +109,15 @@ func (sn sortWritableNodes) Swap(i, j int) {
 func (dnm *DataNodeMap) CollectNodeNeedNewVolume() []*DataNode {
 	dnm.mutex.Lock()
 	nodenum := len(dnm.nodes)
-	i := 0
-    swn := sortWritableNodes{
-		nodes : make([]*DataNode, len(dnm.nodes) + 1),
-		writable : make([]int, len(dnm.nodes)),
+	swn := sortWritableNodes{
+		nodes:    make([]*DataNode, len(dnm.nodes)+1),
+		writable: make([]int, len(dnm.nodes)),
 	}
+	i := 0
 	for _, dn := range dnm.nodes {
 		swn.nodes[i] = dn
 		swn.writable[i] = dn.WritableVolumeCount()
+		i++
 	}
 	dnm.mutex.Unlock()
 
@@ -127,18 +129,18 @@ func (dnm *DataNodeMap) CollectNodeNeedNewVolume() []*DataNode {
 	for id, w := range swn.writable {
 		if w > 0 {
 			i = id
+			break
 		}
 	}
 	if i == 1 {
 		i = 2
-	} else if (i%2==1) {
+	} else if i%2 == 1 {
 		swn.nodes[i] = swn.nodes[0]
 		i++
 	}
 
 	return swn.nodes[:i]
 }
-
 
 func (dnm *DataNodeMap) ToMap() []interface{} {
 	dnm.mutex.Lock()

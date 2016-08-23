@@ -32,6 +32,10 @@ func NewVolume(dirname string, id VolumeId) (*Volume, error) {
 	v := &Volume{
 		Id:  id,
 		dir: path.Join(dirname, id.String()) + VolumeExtension,
+
+		Info: VolumeInfo{
+			Id: id,
+		},
 	}
 	if err := os.MkdirAll(v.dir, 0755); os.IsExist(err) {
 		return v, v.Info.load(v.MetaPath())
