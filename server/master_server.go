@@ -130,11 +130,13 @@ func (m *MasterServer) assignFileidHandler(w http.ResponseWriter, r *http.Reques
 func postFile(uri string, fidstr string, fsize int, r io.Reader, status chan<- error) {
 	url := fmt.Sprintf("http://%s/admin/put/%s", uri, fidstr)
 	req, err := http.NewRequest("POST", url, r)
+	req.Header.Set("Content-Length", strconv.Itoa(fsize))
 	if err != nil {
 		status <- err
 		return
 	}
 	resp, err := http.DefaultClient.Do(req)
+	glog.Extraln("postFile", resp, err)
 	if err != nil {
 		status <- err
 		return
@@ -166,8 +168,8 @@ func (m *MasterServer) putHandler(w http.ResponseWriter, r *http.Request) {
 	nodes := m.Topo.Lookup(fid.VolumeId)
 	if len(nodes) == 2 { // TODO check writable
 		defer r.Body.Close()
-		var rs [2]io.ReadCloser
-		var ws [2]io.Writer
+		var rs [2]*io.PipeReader
+		var ws [2]*io.PipeWriter
 		rs[0], ws[0] = io.Pipe()
 		rs[1], ws[1] = io.Pipe()
 		ww := io.MultiWriter(ws[0], ws[1])
@@ -176,8 +178,9 @@ func (m *MasterServer) putHandler(w http.ResponseWriter, r *http.Request) {
 		go postFile(nodes[0].Url(), fidstr, content_length, rs[0], c)
 		go postFile(nodes[1].Url(), fidstr, content_length, rs[1], c)
 		_, _ = io.Copy(ww, r.Body)
-		rs[0].Close()
-		rs[1].Close()
+		ws[0].CloseWithError(io.EOF)
+		ws[1].CloseWithError(io.EOF)
+		// rs[0].CloseWithError(io.EOF) rs[1].CloseWithError(io.EOF)
 		rerr1 := <-c
 		rerr2 := <-c
 		if rerr1 == nil && rerr2 == nil {
