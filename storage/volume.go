@@ -93,16 +93,10 @@ func (v *Volume) GenFileId() *FileId {
 	return NewFileId(v.Id, key)
 }
 
-func (v *Volume) SaveFile(fid *FileId, r io.Reader) error {
+func (v *Volume) SaveFile(fid *FileId, fsize int, flag byte, r io.Reader) error {
 	fidstr := strconv.FormatUint(fid.Key, 16)
 	fpath := path.Join(v.dir, fidstr)
-	file, err := os.Create(fpath)
-	defer file.Close()
-	if err != nil {
-		return err
-	}
-
-	_, err = io.Copy(file, r)
+	err := WriteFile(fpath, fid, fsize, flag, r)
 	return err
 }
 

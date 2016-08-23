@@ -11,25 +11,26 @@ import (
 )
 
 type VolumeInfo struct {
-	Id               VolumeId
-	Size             uint64
-	FileCount        int
-	ReadOnly         bool
-	Uptime           uint64
+	Id        VolumeId
+	Size      uint64
+	FileCount int
+	ReadOnly  bool
+	Uptime    uint64
 }
 
 func NewVolumeInfo(vim *operation.VolumeInformationMessage) *VolumeInfo {
 	vi := &VolumeInfo{
-		Id:               VolumeId(vim.Id),
-		Size:             uint64(vim.Size),
-		FileCount:        int(vim.FileCount),
-		ReadOnly:         vim.ReadOnly,
+		Id:        VolumeId(vim.Id),
+		Size:      uint64(vim.Size),
+		FileCount: int(vim.FileCount),
+		ReadOnly:  vim.ReadOnly,
+		Uptime:    vim.Uptime,
 	}
 	return vi
 }
 
 func (vi VolumeInfo) String() string {
-	return fmt.Sprintf("Id:%d, Size:%d, FileCount:%d", vi.Id, vi.Size, vi.FileCount)
+	return fmt.Sprintf("Id:%d, Size:%d, FileCount:%d, ReadOnly:%v, Uptime:%d", vi.Id, vi.Size, vi.FileCount, vi.ReadOnly, vi.Uptime)
 }
 
 func (vi *VolumeInfo) load(path string) error {

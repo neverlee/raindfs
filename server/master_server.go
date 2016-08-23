@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net/http"
 	"path"
+	"strconv"
 
 	"raindfs/operation"
 	"raindfs/sequence"
@@ -31,9 +32,8 @@ type MasterServer struct {
 	router *mux.Router
 
 	Topo *topology.Topology
-	//vg     *topology.VolumeGrowth
-	//vgLock sync.Mutex
 
+	//vgLock sync.Mutex
 	//bounedLeaderChan chan int
 }
 
@@ -127,7 +127,7 @@ func (m *MasterServer) assignFileidHandler(w http.ResponseWriter, r *http.Reques
 	writeJsonError(w, r, http.StatusOK, err)
 }
 
-func postFile(uri string, fidstr string, r io.Reader, status chan<- error) {
+func postFile(uri string, fidstr string, fsize int, r io.Reader, status chan<- error) {
 	url := fmt.Sprintf("http://%s/admin/put/%s", uri, fidstr)
 	req, err := http.NewRequest("POST", url, r)
 	if err != nil {
@@ -156,6 +156,13 @@ func (m *MasterServer) putHandler(w http.ResponseWriter, r *http.Request) {
 		writeJsonError(w, r, http.StatusOK, err)
 		return
 	}
+
+	content_length, _ := strconv.Atoi(r.Header.Get("Content-Length"))
+	if content_length == 0 {
+		writeJsonError(w, r, http.StatusOK, fmt.Errorf("No Content-Length or error Content-Length"))
+		return
+	}
+
 	nodes := m.Topo.Lookup(fid.VolumeId)
 	if len(nodes) == 2 { // TODO check writable
 		defer r.Body.Close()
@@ -166,8 +173,8 @@ func (m *MasterServer) putHandler(w http.ResponseWriter, r *http.Request) {
 		ww := io.MultiWriter(ws[0], ws[1])
 		c := make(chan error)
 		defer close(c)
-		go postFile(nodes[0].Url(), fidstr, rs[0], c)
-		go postFile(nodes[1].Url(), fidstr, rs[1], c)
+		go postFile(nodes[0].Url(), fidstr, content_length, rs[0], c)
+		go postFile(nodes[1].Url(), fidstr, content_length, rs[1], c)
 		_, _ = io.Copy(ww, r.Body)
 		rs[0].Close()
 		rs[1].Close()
@@ -176,6 +183,7 @@ func (m *MasterServer) putHandler(w http.ResponseWriter, r *http.Request) {
 		if rerr1 == nil && rerr2 == nil {
 			writeJsonQuiet(w, r, http.StatusOK, "Done!")
 		}
+		glog.Extraln("put error", rerr1, rerr2)
 		return
 	}
 	writeJsonError(w, r, http.StatusOK, fmt.Errorf("Volume is not writable!"))

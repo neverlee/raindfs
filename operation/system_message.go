@@ -1,12 +1,11 @@
 package operation
 
 type VolumeInformationMessage struct {
-	Id               uint32 `json:"id"`
-	Size             uint64 `json:"size"`
-	FileCount        uint64 `json:"file_count"`
-	DeleteCount      uint64 `json:"delete_count"`
-	DeletedByteCount uint64 `json:"deleted_byte_count"`
-	ReadOnly         bool   `json:"read_only"`
+	Id        uint32 `json:"id"`
+	Size      uint64 `json:"size"`
+	FileCount uint64 `json:"file_count"`
+	ReadOnly  bool   `json:"read_only"`
+	Uptime    uint64 `json:"uptime"`
 }
 
 type JoinMessage struct {

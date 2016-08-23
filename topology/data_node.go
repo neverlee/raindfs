@@ -140,5 +140,7 @@ func (dn *DataNode) ToMap() interface{} {
 	defer dn.mutex.RUnlock()
 	ret := make(map[string]interface{})
 	ret["Url"] = dn.Url()
+	ret["Volume"] = len(dn.volumes)
+	ret["Writable"] = len(dn.writable)
 	return ret
 }
