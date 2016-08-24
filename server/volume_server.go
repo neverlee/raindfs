@@ -107,29 +107,33 @@ func (vs *VolumeServer) putHandler(w http.ResponseWriter, r *http.Request) {
 	fidstr := vars["fid"]
 	fid, err := storage.ParseFileId(fidstr)
 	if err != nil {
-		writeJsonError(w, r, http.StatusOK, err)
+		writeJsonError(w, r, http.StatusBadRequest, err)
 		return
 	}
 
-	content_length, _ := strconv.Atoi(r.Header.Get("Content-Length"))
-	if content_length == 0 {
-		writeJsonError(w, r, http.StatusOK, fmt.Errorf("No Content-Length or error Content-Length"))
+	fsize, _ := strconv.Atoi(r.Header.Get("Content-Length"))
+	if fsize == 0 {
+		fsize, _ = strconv.Atoi(r.FormValue("filesize"))
+	}
+
+	if fsize == 0 {
+		writeJsonError(w, r, http.StatusBadRequest, fmt.Errorf("No filesize arguement"))
 		return
 	}
 
 	volume := vs.store.Location.GetVolume(fid.VolumeId)
 	if volume == nil {
-		writeJsonError(w, r, http.StatusOK, errors.New("No such volume")) // TODO
+		writeJsonError(w, r, http.StatusNotFound, errors.New("No such volume")) // TODO
 		return
 	}
 	flag := byte(0)
-	err = volume.SaveFile(fid, content_length, flag, r.Body)
+	err = volume.SaveFile(fid, fsize, flag, r.Body)
 	defer r.Body.Close()
 	if err == nil {
 		writeJsonQuiet(w, r, http.StatusOK, "success")
 		return
 	}
-	writeJsonError(w, r, http.StatusOK, err) // TODO
+	writeJsonError(w, r, http.StatusInternalServerError, err) // TODO
 }
 
 func (vs *VolumeServer) getHandler(w http.ResponseWriter, r *http.Request) {

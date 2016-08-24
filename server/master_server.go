@@ -128,9 +128,9 @@ func (m *MasterServer) assignFileidHandler(w http.ResponseWriter, r *http.Reques
 }
 
 func postFile(uri string, fidstr string, fsize int, r io.Reader, status chan<- error) {
-	url := fmt.Sprintf("http://%s/admin/put/%s", uri, fidstr)
+	url := fmt.Sprintf("http://%s/admin/put/%s?filesize=%d", uri, fidstr, fsize)
+	//req.Header.Set("Content-Length", strconv.Itoa(fsize))
 	req, err := http.NewRequest("POST", url, r)
-	req.Header.Set("Content-Length", strconv.Itoa(fsize))
 	if err != nil {
 		status <- err
 		return
@@ -177,10 +177,11 @@ func (m *MasterServer) putHandler(w http.ResponseWriter, r *http.Request) {
 		defer close(c)
 		go postFile(nodes[0].Url(), fidstr, content_length, rs[0], c)
 		go postFile(nodes[1].Url(), fidstr, content_length, rs[1], c)
-		_, _ = io.Copy(ww, r.Body)
-		ws[0].CloseWithError(io.EOF)
-		ws[1].CloseWithError(io.EOF)
-		// rs[0].CloseWithError(io.EOF) rs[1].CloseWithError(io.EOF)
+		bodylen, berr := io.Copy(ww, r.Body)
+		glog.Extraln("iocopy", bodylen, berr)
+		ws[0].Close()
+		ws[1].Close()
+		//ws[0].CloseWithError(io.EOF) ws[1].CloseWithError(io.EOF)
 		rerr1 := <-c
 		rerr2 := <-c
 		if rerr1 == nil && rerr2 == nil {

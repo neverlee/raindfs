@@ -10,8 +10,6 @@ import (
 	"strconv"
 	"sync"
 
-	"raindfs/util"
-
 	"github.com/satori/go.uuid"
 )
 
@@ -96,26 +94,18 @@ func (v *Volume) GenFileId() *FileId {
 func (v *Volume) SaveFile(fid *FileId, fsize int, flag byte, r io.Reader) error {
 	fidstr := strconv.FormatUint(fid.Key, 16)
 	fpath := path.Join(v.dir, fidstr)
-	err := WriteFile(fpath, fid, fsize, flag, r)
+	err := WriteFile(fpath, fsize, flag, r)
 	return err
 }
 
 func (v *Volume) LoadFile(fid *FileId, w http.ResponseWriter) error {
 	fidstr := strconv.FormatUint(fid.Key, 16)
 	fpath := path.Join(v.dir, fidstr)
-	file, err := os.Open(fpath)
-	defer file.Close()
-	if err != nil {
+	err := ReadFile(fpath, func(n *Needle, r io.Reader) error {
+		w.Header().Set("Content-length", strconv.FormatInt(int64(n.DataSize), 10))
+		_, err := io.Copy(w, r)
 		return err
-	}
-	if fsize, err := util.GetFileSize(file); err == nil {
-		w.Header().Set("Content-length", strconv.FormatInt(fsize, 10))
-	} else {
-		return err
-	}
-
-	_, err = io.Copy(w, file)
-
+	})
 	return err
 }
 
