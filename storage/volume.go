@@ -103,6 +103,8 @@ func (v *Volume) LoadFile(fid *FileId, w http.ResponseWriter) error {
 	fpath := path.Join(v.dir, fidstr)
 	err := ReadFile(fpath, func(n *Needle, r io.Reader) error {
 		w.Header().Set("Content-length", strconv.FormatInt(int64(n.DataSize), 10))
+		w.Header().Set("CRC32", strconv.FormatUint(uint64(n.Checksum), 16))
+		w.Header().Set("Flag", strconv.FormatUint(uint64(n.Flags), 16))
 		_, err := io.Copy(w, r)
 		return err
 	})

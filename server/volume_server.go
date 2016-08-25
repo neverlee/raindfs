@@ -48,7 +48,7 @@ func NewVolumeServer(ip string, port int, data string, masters string, r *mux.Ro
 	r.HandleFunc("/stats/memory", statsMemoryHandler)
 	r.HandleFunc("/stats/disk", vs.statsDiskHandler)
 	r.HandleFunc("/test", vs.testHandler)
-	//adminMux.HandleFunc("/", vs.privateStoreHandler)
+	//r.HandleFunc("/", vs.privateStoreHandler)
 
 	return vs
 }
@@ -127,6 +127,10 @@ func (vs *VolumeServer) putHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	flag := byte(0)
+
+	if r.URL.Query().Get("index") == "true" {
+		flag = 1
+	}
 	err = volume.SaveFile(fid, fsize, flag, r.Body)
 	defer r.Body.Close()
 	if err == nil {

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -105,7 +106,7 @@ func (m *MasterServer) nodeJoinHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, string(blob))
 		var jmsg operation.JoinMessage
 		if jerr := json.Unmarshal(blob, &jmsg); jerr == nil {
-			if jmsg.Ip != "0.0.0.0" && jmsg.Ip != "[::]" {
+			if jmsg.Ip == "0.0.0.0" || jmsg.Ip == "[::]" {
 				jmsg.Ip = ip
 			}
 			m.Topo.ProcessJoinMessage(&jmsg)
@@ -127,8 +128,8 @@ func (m *MasterServer) assignFileidHandler(w http.ResponseWriter, r *http.Reques
 	writeJsonError(w, r, http.StatusOK, err)
 }
 
-func postFile(uri string, fidstr string, fsize int, r io.Reader, status chan<- error) {
-	url := fmt.Sprintf("http://%s/admin/put/%s?filesize=%d", uri, fidstr, fsize)
+func postFile(uri string, fidstr string, fsize int, index bool, r io.Reader, status chan<- error) {
+	url := fmt.Sprintf("http://%s/admin/put/%s?filesize=%d&index=%v", uri, fidstr, fsize, index)
 	//req.Header.Set("Content-Length", strconv.Itoa(fsize))
 	req, err := http.NewRequest("POST", url, r)
 	if err != nil {
@@ -165,6 +166,7 @@ func (m *MasterServer) putHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	index := r.URL.Query().Get("index") == "true"
 	nodes := m.Topo.Lookup(fid.VolumeId)
 	if len(nodes) == 2 { // TODO check writable
 		defer r.Body.Close()
@@ -175,8 +177,8 @@ func (m *MasterServer) putHandler(w http.ResponseWriter, r *http.Request) {
 		ww := io.MultiWriter(ws[0], ws[1])
 		c := make(chan error)
 		defer close(c)
-		go postFile(nodes[0].Url(), fidstr, content_length, rs[0], c)
-		go postFile(nodes[1].Url(), fidstr, content_length, rs[1], c)
+		go postFile(nodes[0].Url(), fidstr, content_length, index, rs[0], c)
+		go postFile(nodes[1].Url(), fidstr, content_length, index, rs[1], c)
 		bodylen, berr := io.Copy(ww, r.Body)
 		glog.Extraln("iocopy", bodylen, berr)
 		ws[0].Close()
@@ -193,13 +195,10 @@ func (m *MasterServer) putHandler(w http.ResponseWriter, r *http.Request) {
 	writeJsonError(w, r, http.StatusOK, fmt.Errorf("Volume is not writable!"))
 }
 
-func (m *MasterServer) getHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	fidstr := vars["fid"]
+func (m *MasterServer) downloadFile(fidstr string, w http.ResponseWriter) error {
 	fid, err := storage.ParseFileId(fidstr)
 	if err != nil {
-		writeJsonError(w, r, http.StatusOK, err)
-		return
+		return err
 	}
 
 	nodes := m.Topo.Lookup(fid.VolumeId)
@@ -207,15 +206,38 @@ func (m *MasterServer) getHandler(w http.ResponseWriter, r *http.Request) {
 		node := nodes[rand.Intn(len(nodes))]
 
 		uri := fmt.Sprintf("http://%s/admin/get/%s", node.Url(), fidstr)
-		err := util.GetUrlStream(uri, nil, func(r io.Reader) error {
-			_, err := io.Copy(w, r)
-			return err
-		})
+		resp, err := http.DefaultClient.Get(uri)
 		if err != nil {
-			writeJsonError(w, r, http.StatusNotFound, fmt.Errorf("No such volume")) // TODO not 200
+			return err
 		}
-		return
+		defer resp.Body.Close()
+		if resp.Header.Get("Flag") == "1" {
+			bufreader := bufio.NewReader(resp.Body)
+			for {
+				ln, err := util.Readln(bufreader)
+				if err != nil || len(ln) == 0 {
+					break
+				}
+				if err = m.downloadFile(string(ln), w); err != nil {
+					return err
+				}
+			}
+		} else {
+			if _, err := io.Copy(w, resp.Body); err != nil {
+				return err
+			}
+			return nil
+		}
+		return nil
 	}
+	return fmt.Errorf("No such volume")
+}
 
-	writeJsonError(w, r, http.StatusNotFound, fmt.Errorf("No such volume"))
+func (m *MasterServer) getHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	fidstr := vars["fid"]
+
+	if err := m.downloadFile(fidstr, w); err != nil {
+		writeJsonError(w, r, http.StatusNotFound, err)
+	}
 }
