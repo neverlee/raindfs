@@ -91,11 +91,10 @@ func (v *Volume) GenFileId() *FileId {
 	return NewFileId(v.Id, key)
 }
 
-func (v *Volume) SaveFile(fid *FileId, fsize int, flag byte, r io.Reader) error {
+func (v *Volume) SaveFile(fid *FileId, fsize int, flag byte, r io.Reader) (*Needle, error) {
 	fidstr := strconv.FormatUint(fid.Key, 16)
 	fpath := path.Join(v.dir, fidstr)
-	err := WriteFile(fpath, fsize, flag, r)
-	return err
+	return WriteFile(fpath, fsize, flag, r)
 }
 
 func (v *Volume) LoadFile(fid *FileId, w http.ResponseWriter) error {

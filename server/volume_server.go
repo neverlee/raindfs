@@ -131,10 +131,14 @@ func (vs *VolumeServer) putHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("index") == "true" {
 		flag = 1
 	}
-	err = volume.SaveFile(fid, fsize, flag, r.Body)
+	needle, err := volume.SaveFile(fid, fsize, flag, r.Body)
 	defer r.Body.Close()
 	if err == nil {
-		writeJsonQuiet(w, r, http.StatusOK, "success")
+		ret := operation.UploadBlockResult{
+			Fid:   fidstr,
+			Crc32: uint32(needle.Checksum),
+		}
+		writeJsonQuiet(w, r, http.StatusOK, ret)
 		return
 	}
 	writeJsonError(w, r, http.StatusInternalServerError, err) // TODO

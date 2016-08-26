@@ -38,7 +38,7 @@ func (n *Needle) String() (str string) {
 	return fmt.Sprintf("Size:%d, DataSize:%d", n.Size, n.DataSize)
 }
 
-func WriteFile(fpath string, fsize int, flag byte, r io.Reader) error {
+func WriteFile(fpath string, fsize int, flag byte, r io.Reader) (*Needle, error) {
 	n := Needle{
 		Flags:    flag,
 		Uptime:   uint64(time.Now().Unix()),
@@ -48,51 +48,57 @@ func WriteFile(fpath string, fsize int, flag byte, r io.Reader) error {
 
 	file, err := os.Create(fpath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if err := binary.Write(file, binary.BigEndian, n); err != nil {
-		file.Close()
-		os.Remove(fpath)
-		return err
-	}
+	var reterr error
+oneloop:
+	for oneloop := true; oneloop; oneloop = false {
 
-	buf := make([]byte, bufferSize)
-	nread := 0
-	for {
-		nb, err := r.Read(buf)
-		if nb > 0 {
-			min := fsize - nread
-			if nb < min {
-				min = nb
-			}
-			nread += min
-			data := buf[:min]
-			if nw, werr := file.Write(data); nw != min || werr != nil {
-				return errors.New("Write fail")
-			}
-			n.Checksum = n.Checksum.Update(data)
+		if err := binary.Write(file, binary.BigEndian, n); err != nil {
+			reterr = err
+			break oneloop
 		}
-		if err == io.EOF { // io.ErrClosedPipe
-			break
-		} else if err != nil {
-			file.Close()
-			os.Remove(fpath)
-			return err
+
+		buf := make([]byte, bufferSize)
+		nread := 0
+		for {
+			nb, err := r.Read(buf)
+			if nb > 0 {
+				min := fsize - nread
+				if nb < min {
+					min = nb
+				}
+				nread += min
+				data := buf[:min]
+				if nw, werr := file.Write(data); nw != min || werr != nil {
+					reterr = errors.New("Write fail")
+					break oneloop
+				}
+				n.Checksum = n.Checksum.Update(data)
+			}
+			if err == io.EOF { // io.ErrClosedPipe
+				break
+			} else if err != nil {
+				reterr = err
+				break oneloop
+			}
 		}
-	}
 
-	file.Seek(0, os.SEEK_SET)
-
-	//n.Checksum = n.Checksum.Value()
-	if err := binary.Write(file, binary.BigEndian, n); err != nil {
-		file.Close()
-		os.Remove(fpath)
-		return err
+		file.Seek(0, os.SEEK_SET)
+		//n.Checksum = n.Checksum.Value()
+		if err := binary.Write(file, binary.BigEndian, n); err != nil {
+			reterr = err
+			break oneloop
+		}
 	}
 
 	file.Close()
-	return nil
+	if reterr != nil {
+		os.Remove(fpath)
+		return nil, reterr
+	}
+	return &n, nil
 }
 
 func ReadFile(fpath string, f func(*Needle, io.Reader) error) error {

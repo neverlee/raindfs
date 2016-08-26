@@ -128,27 +128,39 @@ func (m *MasterServer) assignFileidHandler(w http.ResponseWriter, r *http.Reques
 	writeJsonError(w, r, http.StatusOK, err)
 }
 
-func postFile(uri string, fidstr string, fsize int, index bool, r io.Reader, status chan<- error) {
+func postFile(uri string, fidstr string, fsize int, index bool, r io.Reader, ret chan<- operation.UploadBlockResult) (reterr error) {
+	var ubret operation.UploadBlockResult
+	defer func() {
+		if reterr != nil {
+			ubret.Error = reterr.Error()
+		} else {
+			ubret.Error = ""
+		}
+		ret <- ubret
+	}()
+
 	url := fmt.Sprintf("http://%s/admin/put/%s?filesize=%d&index=%v", uri, fidstr, fsize, index)
 	//req.Header.Set("Content-Length", strconv.Itoa(fsize))
 	req, err := http.NewRequest("POST", url, r)
 	if err != nil {
-		status <- err
-		return
+		return err
 	}
 	resp, err := http.DefaultClient.Do(req)
-	glog.Extraln("postFile", resp, err)
 	if err != nil {
-		status <- err
-		return
+		return err
 	}
 	if resp.StatusCode == http.StatusOK {
-		status <- nil
-		return
-	} else {
-		status <- fmt.Errorf("Fail") // TODO
-		return
+		defer resp.Body.Close()
+		if blob, err := ioutil.ReadAll(resp.Body); err == nil {
+			if err := json.Unmarshal(blob, &ubret); err != nil {
+				return err
+			}
+			return nil
+		} else {
+			return err
+		}
 	}
+	return fmt.Errorf("Status %d", resp.StatusCode) // TODO
 }
 
 func (m *MasterServer) putHandler(w http.ResponseWriter, r *http.Request) {
@@ -175,22 +187,24 @@ func (m *MasterServer) putHandler(w http.ResponseWriter, r *http.Request) {
 		rs[0], ws[0] = io.Pipe()
 		rs[1], ws[1] = io.Pipe()
 		ww := io.MultiWriter(ws[0], ws[1])
-		c := make(chan error)
+		c := make(chan operation.UploadBlockResult)
 		defer close(c)
 		go postFile(nodes[0].Url(), fidstr, content_length, index, rs[0], c)
 		go postFile(nodes[1].Url(), fidstr, content_length, index, rs[1], c)
 		bodylen, berr := io.Copy(ww, r.Body)
-		glog.Extraln("iocopy", bodylen, berr)
 		ws[0].Close()
 		ws[1].Close()
 		//ws[0].CloseWithError(io.EOF) ws[1].CloseWithError(io.EOF)
-		rerr1 := <-c
-		rerr2 := <-c
-		if rerr1 == nil && rerr2 == nil {
-			writeJsonQuiet(w, r, http.StatusOK, "Done!")
+		ubret1 := <-c
+		ubret2 := <-c
+		if ubret1.Error == "" && ubret2.Error == "" && ubret1.Crc32 == ubret2.Crc32 {
+			writeJsonQuiet(w, r, http.StatusOK, ubret1)
+			return
+		} else {
+			glog.Extraln("put error", ubret1, ubret2)
+			writeJsonQuiet(w, r, http.StatusOK, "error")
+			return
 		}
-		glog.Extraln("put error", rerr1, rerr2)
-		return
 	}
 	writeJsonError(w, r, http.StatusOK, fmt.Errorf("Volume is not writable!"))
 }

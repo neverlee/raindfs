@@ -16,6 +16,7 @@ type VolumeInfo struct {
 	FileCount int
 	ReadOnly  bool
 	Uptime    uint64
+	// TODO status 正常 恢复(恢复中)
 }
 
 func NewVolumeInfo(vim *operation.VolumeInformationMessage) *VolumeInfo {
