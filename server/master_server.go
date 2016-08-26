@@ -202,7 +202,7 @@ func (m *MasterServer) putHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		} else {
 			glog.Extraln("put error", ubret1, ubret2)
-			writeJsonQuiet(w, r, http.StatusOK, "error")
+			writeJsonError(w, r, http.StatusOK, fmt.Errorf("Writable fail!!"))
 			return
 		}
 	}
