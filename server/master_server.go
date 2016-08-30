@@ -51,15 +51,10 @@ func NewMasterServer(r *mux.Router, port int, metaFolder string, pulseSeconds in
 
 	//r.HandleFunc("/", ms.uiStatusHandler) r.HandleFunc("/ui/index.html", ms.uiStatusHandler)
 	//r.HandleFunc("/dir/status", ms.proxyToLeader(ms.dirStatusHandler))
-	//r.HandleFunc("/vol/lookup", ms.proxyToLeader(ms.volumeLookupHandler))
 	//r.HandleFunc("/vol/grow",   ms.proxyToLeader(ms.volumeGrowHandler))
 	//r.HandleFunc("/vol/status", ms.proxyToLeader(ms.volumeStatusHandler))
 	//r.HandleFunc("/vol/vacuum", ms.proxyToLeader(ms.volumeVacuumHandler))
 	//r.HandleFunc("/submit", ms.submitFromMasterServerHandler)
-	//r.HandleFunc("/delete", ms.deleteFromMasterServerHandler)
-	//r.HandleFunc("/{fileId}",   ms.proxyToLeader(ms.redirectHandler))
-	//r.HandleFunc("/dir/assign", ms.proxyToLeader(ms.dirAssignHandler))
-	//r.HandleFunc("/dir/lookup", ms.proxyToLeader(ms.dirLookupHandler))
 
 	r.HandleFunc("/admin/assign_fileid", ms.assignFileidHandler)
 	r.HandleFunc("/admin/put/{fid}", ms.putHandler)
