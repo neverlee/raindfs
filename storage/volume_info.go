@@ -1,10 +1,7 @@
 package storage
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"os"
 	"sort"
 
 	"raindfs/operation"
@@ -32,26 +29,6 @@ func NewVolumeInfo(vim *operation.VolumeInformationMessage) *VolumeInfo {
 
 func (vi VolumeInfo) String() string {
 	return fmt.Sprintf("Id:%d, Size:%d, FileCount:%d, ReadOnly:%v, Uptime:%d", vi.Id, vi.Size, vi.FileCount, vi.ReadOnly, vi.Uptime)
-}
-
-func (vi *VolumeInfo) load(path string) error {
-	blob, err := ioutil.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(blob, vi)
-}
-
-func (vi *VolumeInfo) dump(path string) error {
-	blob, err := json.Marshal(vi)
-	if err != nil {
-		return err
-	}
-	newpath := path + "_new"
-	if err = ioutil.WriteFile(newpath, blob, 0644); err != nil {
-		return err
-	}
-	return os.Rename(newpath, path)
 }
 
 /*VolumesInfo sorting*/

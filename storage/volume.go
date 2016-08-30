@@ -2,8 +2,10 @@ package storage
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -19,28 +21,36 @@ const (
 )
 
 type Volume struct {
-	Id  VolumeId
-	dir string
+	Id        VolumeId `json:"id"`
+	Size      uint64   `json:"size"`
+	FileCount int      `json:"file_count"`
+	ReadOnly  bool     `json:"read_only"`
+	Uptime    uint64   `json:"uptime"`
+	Status    int      `json:"status"` //正常 恢复(恢复中)
 
 	mutex sync.Mutex
-	Info  VolumeInfo
+
+	dir string
+	// Info  VolumeInfo
 }
 
 func NewVolume(dirname string, id VolumeId) (*Volume, error) {
 	v := &Volume{
-		Id:  id,
-		dir: path.Join(dirname, id.String()) + VolumeExtension,
+		Id:        id,
+		Size:      0,
+		FileCount: 0,
+		ReadOnly:  false,
+		Uptime:    0,
+		Status:    0,
 
-		Info: VolumeInfo{
-			Id: id,
-		},
+		dir: path.Join(dirname, id.String()) + VolumeExtension,
 	}
 	if err := os.MkdirAll(v.dir, 0755); os.IsExist(err) {
-		return v, v.Info.load(v.MetaPath())
+		return v, v.load(v.MetaPath())
 	} else if err != nil {
 		return nil, err
 	}
-	v.Info.dump(v.MetaPath())
+	v.dump(v.MetaPath())
 	return v, nil
 }
 
@@ -51,7 +61,15 @@ func (v *Volume) String() string {
 func (v *Volume) GetInfo() VolumeInfo {
 	v.mutex.Lock()
 	defer v.mutex.Unlock()
-	return v.Info
+
+	return VolumeInfo{
+		Id:        v.Id,
+		Size:      v.Size,
+		FileCount: v.FileCount,
+		ReadOnly:  v.ReadOnly,
+		Uptime:    v.Uptime,
+		// TODO status 正常 恢复(恢复中)
+	}
 }
 
 func (v *Volume) GetStat() (os.FileInfo, error) {
@@ -76,14 +94,14 @@ func (v *Volume) Destroy() {
 func (v *Volume) Sync() error {
 	v.mutex.Lock()
 	defer v.mutex.Unlock()
-	return v.Info.dump(v.MetaPath())
+	return v.dump(v.MetaPath())
 }
 
 // Close cleanly shuts down this volume
 func (v *Volume) Close() {
 	v.mutex.Lock()
 	defer v.mutex.Unlock()
-	v.Info.dump(v.MetaPath())
+	v.dump(v.MetaPath())
 }
 
 func (v *Volume) GenFileId() *FileId {
@@ -114,4 +132,24 @@ func (v *Volume) DeleteFile(fid *FileId) {
 	fidstr := strconv.FormatUint(fid.Key, 16)
 	fpath := path.Join(v.dir, fidstr)
 	os.Remove(fpath) // TOTO async delete, no errro
+}
+
+func (v *Volume) load(path string) error {
+	blob, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(blob, v)
+}
+
+func (v *Volume) dump(path string) error {
+	blob, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	newpath := path + "_new"
+	if err = ioutil.WriteFile(newpath, blob, 0644); err != nil {
+		return err
+	}
+	return os.Rename(newpath, path)
 }

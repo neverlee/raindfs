@@ -113,9 +113,9 @@ func (l *DiskLocation) ToMap() []*VolumeInfo {
 	stats := make([]*VolumeInfo, len(l.volumes))
 	i := 0
 	for _, v := range l.volumes {
-		s := &v.Info
+		s := v.GetInfo()
 		//&VolumeInfo //Size:   //FileCount:  //DeleteCount: //DeletedByteCount:
-		stats[i] = s
+		stats[i] = &s
 		i++
 	}
 	sortVolumeInfos(stats)
