@@ -31,7 +31,6 @@ type Volume struct {
 	mutex sync.Mutex
 
 	dir string
-	// Info  VolumeInfo
 }
 
 func NewVolume(dirname string, id VolumeId) (*Volume, error) {
@@ -112,7 +111,14 @@ func (v *Volume) GenFileId() *FileId {
 func (v *Volume) SaveFile(fid *FileId, fsize int, flag byte, r io.Reader) (*Needle, error) {
 	fidstr := strconv.FormatUint(fid.Key, 16)
 	fpath := path.Join(v.dir, fidstr)
-	return WriteFile(fpath, fsize, flag, r)
+	needle, err := WriteFile(fpath, fsize, flag, r)
+	if err == nil {
+		v.mutex.Lock()
+		v.FileCount += 1
+		v.Size += uint64(fsize) + uint64(binary.Size(needle))
+		v.mutex.Unlock()
+	}
+	return needle, err
 }
 
 func (v *Volume) LoadFile(fid *FileId, w http.ResponseWriter) error {
@@ -131,7 +137,7 @@ func (v *Volume) LoadFile(fid *FileId, w http.ResponseWriter) error {
 func (v *Volume) DeleteFile(fid *FileId) {
 	fidstr := strconv.FormatUint(fid.Key, 16)
 	fpath := path.Join(v.dir, fidstr)
-	os.Remove(fpath) // TOTO async delete, no errro
+	os.Remove(fpath) // TODO async delete, no errro
 }
 
 func (v *Volume) load(path string) error {
