@@ -128,41 +128,6 @@ func (m *MasterServer) assignFileidHandler(w http.ResponseWriter, r *http.Reques
 	writeJsonError(w, r, http.StatusOK, err)
 }
 
-func postFile(uri string, fidstr string, fsize int, index bool, r io.Reader, ret chan<- operation.UploadBlockResult) (reterr error) {
-	var ubret operation.UploadBlockResult
-	defer func() {
-		if reterr != nil {
-			ubret.Error = reterr.Error()
-		} else {
-			ubret.Error = ""
-		}
-		ret <- ubret
-	}()
-
-	url := fmt.Sprintf("http://%s/admin/put/%s?filesize=%d&index=%v", uri, fidstr, fsize, index)
-	//req.Header.Set("Content-Length", strconv.Itoa(fsize))
-	req, err := http.NewRequest("POST", url, r)
-	if err != nil {
-		return err
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode == http.StatusOK {
-		defer resp.Body.Close()
-		if blob, err := ioutil.ReadAll(resp.Body); err == nil {
-			if err := json.Unmarshal(blob, &ubret); err != nil {
-				return err
-			}
-			return nil
-		} else {
-			return err
-		}
-	}
-	return fmt.Errorf("Status %d", resp.StatusCode) // TODO
-}
-
 func (m *MasterServer) putHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	fidstr := vars["fid"]
@@ -189,9 +154,12 @@ func (m *MasterServer) putHandler(w http.ResponseWriter, r *http.Request) {
 		ww := io.MultiWriter(ws[0], ws[1])
 		c := make(chan operation.UploadBlockResult)
 		defer close(c)
-		go postFile(nodes[0].Url(), fidstr, content_length, index, rs[0], c)
-		go postFile(nodes[1].Url(), fidstr, content_length, index, rs[1], c)
-		bodylen, berr := io.Copy(ww, r.Body)
+		go operation.PostFile(nodes[0].Url(), fidstr, content_length, index, rs[0], c)
+		go operation.PostFile(nodes[1].Url(), fidstr, content_length, index, rs[1], c)
+		if _, berr := io.Copy(ww, r.Body); berr != nil {
+			writeJsonError(w, r, http.StatusOK, berr)
+			return
+		}
 		ws[0].Close()
 		ws[1].Close()
 		//ws[0].CloseWithError(io.EOF) ws[1].CloseWithError(io.EOF)
