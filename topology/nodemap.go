@@ -126,8 +126,11 @@ func (dnm *DataNodeMap) CollectNodeNeedNewVolume() []*DataNode {
 	}
 
 	sort.Sort(swn)
+
+	// 如果可写volume数小于，最多可写volume节点的一半加1，则需要分配
+	minw := swn.writable[len(swn.writable)-1]/2 + 1
 	for id, w := range swn.writable {
-		if w > 0 {
+		if w > minw {
 			i = id
 			break
 		}
