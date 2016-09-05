@@ -145,13 +145,14 @@ func (dnm *DataNodeMap) CollectNodeNeedNewVolume() []*DataNode {
 	return swn.nodes[:i]
 }
 
-func (dnm *DataNodeMap) ToMap() []interface{} {
+func (dnm *DataNodeMap) ToData() []*DataNodeData {
 	dnm.mutex.Lock()
 	defer dnm.mutex.Unlock()
-	ret := make([]interface{}, len(dnm.nodes))
+
+	ret := make([]*DataNodeData, len(dnm.nodes))
 	i := 0
 	for _, dn := range dnm.nodes {
-		ret[i] = dn.ToMap()
+		ret[i] = dn.ToData()
 		i++
 	}
 	return ret

@@ -66,6 +66,14 @@ func (dnll *VolumeLocationList) ToList() []*DataNode {
 	return dnll.list[:]
 }
 
+func (dnll *VolumeLocationList) ToNameList() []string {
+	ret := make([]string, len(dnll.list))
+	for i, v := range dnll.list {
+		ret[i] = v.Url()
+	}
+	return ret
+}
+
 //func (dnll *VolumeLocationList) Refresh(freshThreshHold int64) {
 //	var changed bool
 //	for _, dnl := range dnll.list {

@@ -18,23 +18,18 @@ type Topology struct {
 	volumeLayout *VolumeLayout
 
 	pulse    int
-	Sequence *sequence.Sequencer
+	sequence *sequence.Sequencer
 
-	//chanDeadDataNodes      chan *DataNode
-	//chanRecoveredDataNodes chan *DataNode
-	//chanFullVolumes        chan storage.VolumeInfo
+	//chanDeadDataNodes, chanRecoveredDataNodes *DataNode, chanFullVolumes storage.VolumeInfo
 }
 
 func NewTopology(seq *sequence.Sequencer, pulse int) *Topology {
 	t := &Topology{}
 	t.pulse = pulse
-	t.Sequence = seq
+	t.sequence = seq
 
 	t.nodemap = NewDataNodeMap()
 	t.volumeLayout = NewVolumeLayout()
-
-	//t.chanRecoveredDataNodes = make(chan *DataNode)
-	//t.chanFullVolumes = make(chan storage.VolumeInfo)
 
 	return t
 }
@@ -59,7 +54,7 @@ func (t *Topology) StartRefreshWritableVolumes() {
 			if t.IsLeader() {
 				nodes := t.nodemap.CollectNodeNeedNewVolume()
 				for i := 0; i < len(nodes); i += 2 {
-					ivid, _ := t.Sequence.NextId(1)
+					ivid, _ := t.sequence.NextId(1)
 					vid := storage.VolumeId(ivid)
 					if ainfo, aerr := nodes[i].AssignVolume(vid); aerr == nil {
 						glog.V(0).Infoln("Assign New Volume", vid, nodes[i].Url(), ainfo, aerr)
@@ -94,7 +89,7 @@ func (t *Topology) Lookup(vid storage.VolumeId) []*DataNode {
 }
 
 func (t *Topology) NextVolumeId() storage.VolumeId {
-	_, r := t.Sequence.NextId(1)
+	_, r := t.sequence.NextId(1)
 	return storage.VolumeId(r)
 }
 
@@ -110,7 +105,7 @@ func (t *Topology) PickForWrite() (storage.VolumeId, *VolumeLocationList, error)
 	wnodes := t.nodemap.GetWritableNodes()
 	if len(wnodes) >= replicate {
 		idx := util.RandTwo(len(wnodes))
-		ivid, _ := t.Sequence.NextId(1)
+		ivid, _ := t.sequence.NextId(1)
 		vid := storage.VolumeId(ivid)
 		var nodelist []*DataNode
 		for _, id := range idx {
@@ -170,19 +165,19 @@ func (t *Topology) ProcessJoinMessage(joinMessage *operation.JoinMessage) *opera
 	return &jmsg
 }
 
-func (t *Topology) ToMap() interface{} {
-	m := make(map[string]interface{})
-	//m["Max"] = t.GetMaxVolumeCount()
-	m["DataNodes"] = t.nodemap.ToMap()
-	m["layouts"] = t.volumeLayout.ToMap()
-	return m
-}
-
 func (t *Topology) GetMaxVolumeId() storage.VolumeId {
-	r := t.Sequence.Peek()
+	r := t.sequence.Peek()
 	return storage.VolumeId(r)
 }
 
-//func (t *Topology) GetVolumeCount() int
-//func (t *Topology) GetActiveVolumeCount() int
-//func (t *Topology) GetMaxVolumeCount() int
+type TopologyData struct {
+	DataNodes []*DataNodeData
+	Layouts   *VolumeLayoutData
+}
+
+func (t *Topology) ToData() *TopologyData {
+	return &TopologyData{
+		DataNodes: t.nodemap.ToData(),
+		Layouts:   t.volumeLayout.ToData(),
+	}
+}

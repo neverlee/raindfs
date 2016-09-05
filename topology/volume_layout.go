@@ -179,13 +179,31 @@ func (vl *VolumeLayout) CheckVolumes(volumeSizeLimit uint64) {
 	//}
 }
 
-func (vl *VolumeLayout) ToMap() map[string]interface{} {
-	m := make(map[string]interface{})
-	m["writables"] = vl.writables
-	svid2loc := make(map[string][]*DataNode, len(vl.vid2location))
+type VolumeLayoutData struct {
+	Writables        []storage.VolumeId
+	Vid2location     map[storage.VolumeId][]string
+	OversizedVolumes map[storage.VolumeId]bool // set of oversized volumes
+}
+
+func (vl *VolumeLayout) ToData() *VolumeLayoutData {
+	vl.accessLock.Lock()
+	defer vl.accessLock.Unlock()
+
+	svid2loc := make(map[storage.VolumeId][]string, len(vl.vid2location))
 	for k, v := range vl.vid2location {
-		svid2loc[k.String()] = v.ToList()
+		svid2loc[k] = v.ToNameList()
 	}
-	m["vid2location"] = svid2loc
-	return m
+
+	osvolume := make(map[storage.VolumeId]bool)
+	for k, v := range vl.oversizedVolumes {
+		osvolume[k] = v
+	}
+
+	ret := VolumeLayoutData{
+		Writables:        vl.writables[:],
+		Vid2location:     svid2loc,
+		OversizedVolumes: osvolume,
+	}
+
+	return &ret
 }

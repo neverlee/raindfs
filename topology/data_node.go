@@ -18,10 +18,10 @@ type DataNode struct {
 
 	freeSpace int
 
-	volumes  map[storage.VolumeId]storage.VolumeInfo
-	writable map[storage.VolumeId]struct{}
-	LastSeen int64 // unix time in seconds
-	Dead     bool  // TODO 状态，enable，dead，close
+	volumes   map[storage.VolumeId]storage.VolumeInfo
+	writables map[storage.VolumeId]struct{}
+	LastSeen  int64 // unix time in seconds
+	Dead      bool  // TODO 状态，enable，dead，close
 
 	mutex sync.RWMutex
 }
@@ -29,7 +29,7 @@ type DataNode struct {
 func NewDataNode(ip string, port int) *DataNode {
 	s := &DataNode{ip: ip, port: port}
 	s.volumes = make(map[storage.VolumeId]storage.VolumeInfo)
-	s.writable = make(map[storage.VolumeId]struct{})
+	s.writables = make(map[storage.VolumeId]struct{})
 	return s
 }
 
@@ -48,19 +48,19 @@ func (dn *DataNode) VolumeCount() int {
 func (dn *DataNode) WritableVolumeCount() int {
 	dn.mutex.RLock()
 	defer dn.mutex.RUnlock()
-	return len(dn.writable)
+	return len(dn.writables)
 }
 
 func (dn *DataNode) SetWritableVolume(id storage.VolumeId) {
 	dn.mutex.RLock()
 	defer dn.mutex.RUnlock()
-	dn.writable[id] = struct{}{}
+	dn.writables[id] = struct{}{}
 }
 
 func (dn *DataNode) DelWritableVolume(id storage.VolumeId) {
 	dn.mutex.RLock()
 	defer dn.mutex.RUnlock()
-	delete(dn.writable, id)
+	delete(dn.writables, id)
 }
 
 func (dn *DataNode) AddOrUpdateVolume(v storage.VolumeInfo) {
@@ -135,12 +135,42 @@ func (dn *DataNode) AssignVolume(vid storage.VolumeId) (*storage.VolumeInfo, err
 	return nil, err
 }
 
-func (dn *DataNode) ToMap() interface{} {
+type DataNodeData struct {
+	IP   string
+	Port int
+
+	FreeSpace int
+
+	Volumes  map[storage.VolumeId]storage.VolumeInfo
+	Writable []storage.VolumeId
+	LastSeen int64 // unix time in seconds
+	Dead     bool  // TODO 状态，enable，dead，close
+}
+
+func (dn *DataNode) ToData() *DataNodeData {
 	dn.mutex.RLock()
 	defer dn.mutex.RUnlock()
-	ret := make(map[string]interface{})
-	ret["Url"] = dn.Url()
-	ret["Volume"] = len(dn.volumes)
-	ret["Writable"] = len(dn.writable)
-	return ret
+
+	volumes := make(map[storage.VolumeId]storage.VolumeInfo, len(dn.volumes))
+	for k, v := range dn.volumes {
+		volumes[k] = v
+	}
+
+	writables := make([]storage.VolumeId, len(dn.writables))
+	i := 0
+	for k, _ := range dn.writables {
+		writables[i] = k
+		i++
+	}
+
+	ret := DataNodeData{
+		IP:        dn.ip,
+		Port:      dn.port,
+		FreeSpace: dn.freeSpace,
+		Volumes:   volumes,
+		Writable:  writables,
+		LastSeen:  dn.LastSeen,
+		Dead:      dn.Dead,
+	}
+	return &ret
 }
