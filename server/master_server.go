@@ -85,12 +85,12 @@ func (m *MasterServer) clusterStatusHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func (m *MasterServer) statsNodesHandler(w http.ResponseWriter, r *http.Request) {
-	ret := m.Topo.ToMap()
+	ret := m.Topo.ToData()
 	writeJsonQuiet(w, r, http.StatusOK, ret)
 }
 
 func (m *MasterServer) testHandler(w http.ResponseWriter, r *http.Request) {
-	ret := m.Topo.ToMap()
+	ret := m.Topo.ToData()
 	writeJsonQuiet(w, r, http.StatusOK, ret)
 }
 
