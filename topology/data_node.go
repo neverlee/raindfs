@@ -142,7 +142,7 @@ type DataNodeData struct {
 	FreeSpace int
 
 	Volumes  map[storage.VolumeId]storage.VolumeInfo
-	Writable []storage.VolumeId
+	Writable map[storage.VolumeId]struct{}
 	LastSeen int64 // unix time in seconds
 	Dead     bool  // TODO 状态，enable，dead，close
 }
@@ -156,11 +156,9 @@ func (dn *DataNode) ToData() *DataNodeData {
 		volumes[k] = v
 	}
 
-	writables := make([]storage.VolumeId, len(dn.writables))
-	i := 0
-	for k, _ := range dn.writables {
-		writables[i] = k
-		i++
+	writables := make(map[storage.VolumeId]struct{}, len(dn.writables))
+	for k, v := range dn.writables {
+		writables[k] = v
 	}
 
 	ret := DataNodeData{
@@ -173,4 +171,17 @@ func (dn *DataNode) ToData() *DataNodeData {
 		Dead:      dn.Dead,
 	}
 	return &ret
+}
+
+func FromData(data *DataNodeData) *DataNode {
+	dn := DataNode{
+		ip:        data.IP,
+		port:      data.Port,
+		freeSpace: data.FreeSpace,
+		volumes:   data.Volumes,
+		writables: data.Writable,
+		LastSeen:  data.LastSeen,
+		Dead:      data.Dead,
+	}
+	return &dn
 }

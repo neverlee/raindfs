@@ -8,7 +8,6 @@ import (
 
 type ClusterStatusResult struct {
 	Leader   string   `json:"Leader,omitempty"`
-	LeaderId int      `json:"LeaderId,omitempty"`
 	Clusters []string `json:"Clusters,omitempty"`
 }
 

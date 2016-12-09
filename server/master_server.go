@@ -76,9 +76,9 @@ func NewMasterServer(r *mux.Router, port int, metaFolder string, pulseSeconds in
 
 func (m *MasterServer) clusterStatusHandler(w http.ResponseWriter, r *http.Request) {
 	hi := fmt.Sprintf("127.0.0.1:%d", m.port)
+	// leader 放最前面
 	ret := operation.ClusterStatusResult{
 		Leader:   hi,
-		LeaderId: 0,
 		Clusters: []string{hi},
 	}
 	writeJsonQuiet(w, r, http.StatusOK, ret)

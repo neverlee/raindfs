@@ -9,7 +9,7 @@ type VolumeInformationMessage struct {
 }
 
 type JoinMessage struct {
-	IsInit         bool                        `json:"is_init"`
+	//IsInit         bool                        `json:"is_init"`
 	Ip             string                      `json:"ip"`
 	Port           uint32                      `json:"port"`
 	MaxVolumeCount uint32                      `json:"max_volume_count"`
