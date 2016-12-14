@@ -1,0 +1,5 @@
+
+./raindfs master
+./raindfs volume -master 127.0.0.1:10000 -dir v1 -port 20001
+./raindfs volume -master 127.0.0.1:10000 -dir v2 -port 20002
+./raindfs volume -master 127.0.0.1:10000 -dir v3 -port 20003
