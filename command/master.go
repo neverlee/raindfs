@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"strconv"
+	"time"
 
 	"raindfs/server"
 	"raindfs/util"
@@ -71,12 +72,11 @@ func runMaster(cmd *Command, args []string) bool {
 	port := *msopt.port
 	pulse := *msopt.pulse
 	metaFolder := *msopt.metaFolder
-	timeout := *msopt.timeout
+	timeout := time.Duration(*msopt.timeout) * time.Second
 	if err := util.MkdirOrExist(metaFolder); err != nil {
 		glog.Fatalf("Check Meta Folder (-mdir) Writable %s : %s", metaFolder, err)
 	}
 
-	// TODO time.Duration(timeout)*time.Second
 	listeningAddress := ip + ":" + strconv.Itoa(port)
 	listener, err := net.Listen("tcp", listeningAddress)
 	if err != nil {
@@ -85,7 +85,7 @@ func runMaster(cmd *Command, args []string) bool {
 	}
 
 	router := mux.NewRouter()
-	ms := server.NewMaster(listener, router, port, metaFolder, pulse)
+	ms := server.NewMaster(listener, router, port, metaFolder, pulse, timeout)
 	ms.SetMasterServer(router)
 
 	glog.V(0).Infoln("Start Seaweed Master", util.VERSION, "at", listeningAddress)

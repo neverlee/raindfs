@@ -51,7 +51,7 @@ type MasterServer struct {
 	//bounedLeaderChan chan int
 }
 
-func NewMaster(l net.Listener, r *mux.Router, port int, metaFolder string, pulseSeconds int) *MasterServer {
+func NewMaster(l net.Listener, r *mux.Router, port int, metaFolder string, pulseSeconds int, timeout time.Duration) *MasterServer {
 	ms := &MasterServer{
 		port:         port,
 		metaFolder:   metaFolder,

@@ -13,6 +13,7 @@ var Commands = []*Command{
 	cmdDownload,
 	cmdVersion,
 	cmdVolume,
+	cmdSwitch,
 }
 
 type Command struct {
