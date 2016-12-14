@@ -1,12 +1,12 @@
 package command
 
 import (
+	"net"
 	"net/http"
 	"os"
 	"runtime"
 	"runtime/pprof"
 	"strconv"
-	"time"
 
 	"raindfs/server"
 	"raindfs/util"
@@ -43,7 +43,7 @@ func init() {
 		ip:         cmdMaster.Flag.String("ip", "0.0.0.0", "ip address to bind to"),
 		port:       cmdMaster.Flag.Int("port", 10000, "http listen port"),
 		metaFolder: cmdMaster.Flag.String("mdir", "./meta", "data directory to store meta data"),
-		cluster:    cmdMaster.Flag.String("cluster", "", "other master nodes in comma separated ip:port list, example: 127.0.0.1:9093,127.0.0.1:9094"),
+		cluster:    cmdMaster.Flag.String("cluster", "", "master nodes in comma separated ip:port list, example: 127.0.0.1:9093,127.0.0.1:9094"),
 		pulse:      cmdMaster.Flag.Int("pulseseconds", 5, "number of seconds between heartbeats"),
 		timeout:    cmdMaster.Flag.Int("idletimeout", 10, "connection idle seconds"),
 		maxCpu:     cmdMaster.Flag.Int("maxcpu", 0, "maximum number of CPUs. 0 means all available CPUs"),
@@ -76,17 +76,19 @@ func runMaster(cmd *Command, args []string) bool {
 		glog.Fatalf("Check Meta Folder (-mdir) Writable %s : %s", metaFolder, err)
 	}
 
-	router := mux.NewRouter()
-	_ = server.NewMasterServer(router, port, metaFolder, pulse)
-
+	// TODO time.Duration(timeout)*time.Second
 	listeningAddress := ip + ":" + strconv.Itoa(port)
+	listener, err := net.Listen("tcp", listeningAddress)
+	if err != nil {
+		glog.Fatalf("Master startup error: %v", err)
+		return false
+	}
+
+	router := mux.NewRouter()
+	ms := server.NewMaster(listener, router, port, metaFolder, pulse)
+	ms.SetMasterServer(router)
 
 	glog.V(0).Infoln("Start Seaweed Master", util.VERSION, "at", listeningAddress)
-
-	listener, e := util.NewListener(listeningAddress, time.Duration(timeout)*time.Second)
-	if e != nil {
-		glog.Fatalf("Master startup error: %v", e)
-	}
 
 	if e := http.Serve(listener, router); e != nil {
 		glog.Fatalf("Fail to serve: %v", e)
