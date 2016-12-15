@@ -10,8 +10,7 @@ type VolumeInformationMessage struct {
 
 type JoinMessage struct {
 	//IsInit         bool                        `json:"is_init"`
-	Ip             string                      `json:"ip"`
-	Port           uint32                      `json:"port"`
+	Addr           string                      `json:"addr"`
 	MaxVolumeCount uint32                      `json:"max_volume_count"`
 	Volumes        []*VolumeInformationMessage `json:"volumes"`
 	FreeSpace      uint64                      `json:"free_space"`

@@ -27,11 +27,11 @@ type VolumeServer struct {
 	store        *storage.Store
 }
 
-func NewVolumeServer(ip string, port int, data string, masters string, r *mux.Router, pulseSeconds int) *VolumeServer {
+func NewVolumeServer(addr string, data string, masters string, r *mux.Router, pulseSeconds int) *VolumeServer {
 	vs := &VolumeServer{
 		pulseSeconds: pulseSeconds,
 	}
-	vs.store = storage.NewStore(ip, port, data)
+	vs.store = storage.NewStore(addr, data)
 	vs.store.SetClusters(strings.Split(masters, ","))
 
 	go vs.heartBeat()

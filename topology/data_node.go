@@ -2,7 +2,6 @@ package topology
 
 import (
 	"fmt"
-	"strconv"
 	"sync"
 
 	"raindfs/operation"
@@ -13,8 +12,7 @@ import (
 
 type DataNode struct {
 	//id  string volumeCount int activeVolumeCount int
-	ip   string
-	port int
+	addr string
 
 	freeSpace int
 
@@ -26,8 +24,8 @@ type DataNode struct {
 	mutex sync.RWMutex
 }
 
-func NewDataNode(ip string, port int) *DataNode {
-	s := &DataNode{ip: ip, port: port}
+func NewDataNode(addr string) *DataNode {
+	s := &DataNode{addr: addr}
 	s.volumes = make(map[storage.VolumeId]storage.VolumeInfo)
 	s.writables = make(map[storage.VolumeId]struct{})
 	return s
@@ -36,7 +34,7 @@ func NewDataNode(ip string, port int) *DataNode {
 func (dn *DataNode) String() string {
 	dn.mutex.RLock()
 	defer dn.mutex.RUnlock()
-	return fmt.Sprintf("Node> volumes:%v, Ip:%s, Port:%d, Dead:%v", dn.volumes, dn.ip, dn.port, dn.Dead)
+	return fmt.Sprintf("Node> volumes:%v, Addr:%s, Dead:%v", dn.volumes, dn.addr, dn.Dead)
 }
 
 func (dn *DataNode) VolumeCount() int {
@@ -108,13 +106,13 @@ func (dn *DataNode) GetVolumes() (ret []storage.VolumeInfo) {
 	return ret
 }
 
-func (dn *DataNode) MatchLocation(ip string, port int) bool {
-	return dn.ip == ip && dn.port == port
+func (dn *DataNode) MatchLocation(addr string) bool {
+	return dn.addr == addr
 }
 
 func (dn *DataNode) Url() string {
 	// ip and port 固定，不需加锁
-	return dn.ip + ":" + strconv.Itoa(dn.port)
+	return dn.addr
 }
 
 func (dn *DataNode) AssignVolume(vid storage.VolumeId) (*storage.VolumeInfo, error) {
@@ -136,8 +134,7 @@ func (dn *DataNode) AssignVolume(vid storage.VolumeId) (*storage.VolumeInfo, err
 }
 
 type DataNodeData struct {
-	IP   string
-	Port int
+	Addr string
 
 	FreeSpace int
 
@@ -162,8 +159,7 @@ func (dn *DataNode) ToData() *DataNodeData {
 	}
 
 	ret := DataNodeData{
-		IP:        dn.ip,
-		Port:      dn.port,
+		Addr:      dn.addr,
 		FreeSpace: dn.freeSpace,
 		Volumes:   volumes,
 		Writable:  writables,
@@ -175,8 +171,7 @@ func (dn *DataNode) ToData() *DataNodeData {
 
 func FromData(data *DataNodeData) *DataNode {
 	dn := DataNode{
-		ip:        data.IP,
-		port:      data.Port,
+		addr:      data.Addr,
 		freeSpace: data.FreeSpace,
 		volumes:   data.Volumes,
 		writables: data.Writable,

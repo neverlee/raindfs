@@ -139,10 +139,10 @@ func (t *Topology) UnRegisterDataNode(dn *DataNode) {
 }
 
 func (t *Topology) ProcessJoinMessage(joinMessage *operation.JoinMessage) *operation.JoinMessage {
-	dn := t.nodemap.FindDataNode(joinMessage.Ip, int(joinMessage.Port))
+	dn := t.nodemap.FindDataNode(joinMessage.Addr)
 	// if joinMessage.IsInit && dn != nil { t.UnRegisterDataNode(dn) }
 	// 处理reconvered
-	dn = t.nodemap.GetOrCreateDataNode(joinMessage.Ip, int(joinMessage.Port), int(joinMessage.MaxVolumeCount))
+	dn = t.nodemap.GetOrCreateDataNode(joinMessage.Addr, int(joinMessage.MaxVolumeCount))
 	dn.SetFreeSpace(int(joinMessage.FreeSpace))
 
 	var volumeInfos []storage.VolumeInfo

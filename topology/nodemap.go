@@ -1,7 +1,6 @@
 package topology
 
 import (
-	"fmt"
 	"sort"
 	"sync"
 	"time"
@@ -32,19 +31,17 @@ func (dnm *DataNodeMap) UnlinkChildNode(host string) {
 	delete(dnm.nodes, host)
 }
 
-func (dnm *DataNodeMap) FindDataNode(ip string, port int) *DataNode {
+func (dnm *DataNodeMap) FindDataNode(addr string) *DataNode {
 	dnm.mutex.Lock()
 	defer dnm.mutex.Unlock()
-	key := fmt.Sprintf("%s:%d", ip, port)
-	dn, _ := dnm.nodes[key]
+	dn, _ := dnm.nodes[addr]
 	return dn
 }
 
-func (dnm *DataNodeMap) GetOrCreateDataNode(ip string, port int, maxVolumeCount int) *DataNode {
+func (dnm *DataNodeMap) GetOrCreateDataNode(addr string, maxVolumeCount int) *DataNode {
 	dnm.mutex.Lock()
 	defer dnm.mutex.Unlock()
-	key := fmt.Sprintf("%s:%d", ip, port)
-	if dn, ok := dnm.nodes[key]; ok {
+	if dn, ok := dnm.nodes[addr]; ok {
 		dn.LastSeen = time.Now().Unix()
 		if dn.Dead {
 			dn.Dead = false
@@ -53,9 +50,9 @@ func (dnm *DataNodeMap) GetOrCreateDataNode(ip string, port int, maxVolumeCount 
 		return dn
 	}
 
-	dn := NewDataNode(ip, port)
+	dn := NewDataNode(addr)
 	dn.LastSeen = time.Now().Unix()
-	dnm.nodes[key] = dn
+	dnm.nodes[addr] = dn
 	return dn
 }
 

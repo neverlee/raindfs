@@ -75,20 +75,19 @@ func (mn *MasterNodes) FindMaster() ([]string, error) {
  * A VolumeServer contains one Store
  */
 type Store struct {
-	Ip          string
-	Port        int
+	Addr        string
 	Location    *DiskLocation
 	lconnected  bool
 	masterNodes *MasterNodes
 }
 
 func (s *Store) String() (str string) {
-	str = fmt.Sprintf("Ip:%s, Port:%d, masterNodes:%s", s.Ip, s.Port, s.masterNodes)
+	str = fmt.Sprintf("Addr:%s, masterNodes:%s", s.Addr, s.masterNodes)
 	return
 }
 
-func NewStore(ip string, port int, dirname string) (s *Store) {
-	s = &Store{Port: port, Ip: ip}
+func NewStore(addr string, dirname string) (s *Store) {
+	s = &Store{Addr: addr}
 	s.Location = NewDiskLocation(dirname)
 	s.Location.loadExistingVolumes()
 	return
@@ -128,8 +127,7 @@ func (s *Store) SendHeartbeatToMaster() (masterNode []string, e error) {
 	diskStatus := stats.NewDiskStatus(s.Location.Directory())
 	joinMessage := &operation.JoinMessage{
 		//IsInit:         !s.connected,
-		Ip:             s.Ip,
-		Port:           uint32(s.Port),
+		Addr:           s.Addr,
 		MaxVolumeCount: uint32(maxVolumeCount),
 		Volumes:        volumeMessages,
 		FreeSpace:      diskStatus.Free,

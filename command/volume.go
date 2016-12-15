@@ -3,7 +3,6 @@ package command
 import (
 	"net/http"
 	"runtime"
-	"strconv"
 	"time"
 
 	"raindfs/server"
@@ -14,8 +13,7 @@ import (
 )
 
 type volumeServerOption struct {
-	ip                    *string
-	port                  *int
+	addr                  *string
 	masters               *string
 	data                  *string
 	pulseSeconds          *int
@@ -28,8 +26,7 @@ var vsopt volumeServerOption
 func init() {
 	cmdVolume.Run = runVolume // break init cycle
 	vsopt = volumeServerOption{
-		ip:                    cmdVolume.Flag.String("ip", "0.0.0.0", "ip or server name"),
-		port:                  cmdVolume.Flag.Int("port", 20000, "http listen port"),
+		addr:                  cmdVolume.Flag.String("ip", "0.0.0.0:2000", "ip:port"),
 		masters:               cmdVolume.Flag.String("master", "127.0.0.1:10000,", "master hosts"),
 		data:                  cmdVolume.Flag.String("dir", "./data", "data dir"),
 		pulseSeconds:          cmdVolume.Flag.Int("pulseseconds", 5, "number of seconds between heartbeats, must be smaller than or equal to the master's setting"),
@@ -53,8 +50,7 @@ func runVolume(cmd *Command, args []string) bool {
 
 	router := mux.NewRouter()
 
-	ip := *vsopt.ip
-	port := *vsopt.port
+	addr := *vsopt.addr
 	data := *vsopt.data
 	masters := *vsopt.masters
 	pulseSeconds := *vsopt.pulseSeconds
@@ -64,11 +60,10 @@ func runVolume(cmd *Command, args []string) bool {
 		glog.Fatalf("Check data Folder (-dir) Writable %s : %s", vsopt.data, err)
 	}
 
-	volumeServer := server.NewVolumeServer(ip, port, data, masters, router, pulseSeconds)
+	volumeServer := server.NewVolumeServer(addr, data, masters, router, pulseSeconds)
 
-	listeningAddress := ip + ":" + strconv.Itoa(port)
-	glog.V(0).Infoln("Start Rain volume server", util.VERSION, "at", listeningAddress)
-	listener, e := util.NewListener(listeningAddress, time.Duration(idleConnectionTimeout)*time.Second)
+	glog.V(0).Infoln("Start Rain volume server", util.VERSION, "at", addr)
+	listener, e := util.NewListener(addr, time.Duration(idleConnectionTimeout)*time.Second)
 	if e != nil {
 		glog.Fatalf("Volume server listener error:%v", e)
 	}
