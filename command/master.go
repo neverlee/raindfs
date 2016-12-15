@@ -9,11 +9,13 @@ import (
 	"strings"
 	"time"
 
+	"raindfs/raftlayer"
 	"raindfs/server"
 	"raindfs/util"
 
 	"github.com/gorilla/mux"
 	"github.com/neverlee/glog"
+	"github.com/soheilhy/cmux"
 )
 
 var cmdMaster = &Command{
@@ -90,11 +92,22 @@ func runMaster(cmd *Command, args []string) bool {
 		return false
 	}
 
+	mux := cmux.New(listener)
+	HTTPListener := &util.Listener{
+		Listener:     mux.Match(cmux.HTTP1Fast()),
+		ReadTimeout:  timeout,
+		WriteTimeout: timeout,
+	}
+	RaftListener := mux.Match(cmux.Any())
+
+	raftserver := raftlayer.NewRaftServer(RaftListener, addr, clusters, metaDir, pulse, timeout)
+
 	router := mux.NewRouter()
-	ms := server.NewMasterServer(listener, addr, bindall, clusters, metaDir, pulse, timeout)
+	ms := server.NewMasterServer(raftserver, pulse)
 	if ms == nil {
 		glog.Fatalf("Fail to serve")
 	}
+
 	ms.SetMasterServer(router)
 
 	glog.V(0).Infoln("Start Seaweed Master", util.VERSION, "at", addr)

@@ -6,36 +6,19 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
-	"os"
 	"time"
 
 	"raindfs/operation"
 	"raindfs/raftlayer"
-	"raindfs/sequence"
 	"raindfs/storage"
 	"raindfs/topology"
 	"raindfs/util"
 
 	"github.com/gorilla/mux"
-	"github.com/hashicorp/raft"
-	"github.com/soheilhy/cmux"
 )
 
 type MasterServer struct {
-	addr         string
-	clusters     []string
-	metaFolder   string
-	pulseSeconds int
-
-	seq  *sequence.Sequencer
 	Topo *topology.Topology
-
-	raftLayer *raftlayer.RaftLayer
-	raftTrans *raft.NetworkTransport
-	raft      *raft.Raft
-
-	fsm *raftlayer.FSM
-	mux cmux.CMux
 
 	listener     net.Listener
 	RaftListener net.Listener
@@ -44,59 +27,14 @@ type MasterServer struct {
 	//bounedLeaderChan chan int
 }
 
-func NewMasterServer(l net.Listener, addr string, bindall bool, clusters []string, metaFolder string, pulse int, timeout time.Duration) *MasterServer {
-	ms := &MasterServer{
-		addr:         addr,
-		metaFolder:   metaFolder,
-		pulseSeconds: pulse,
-	}
-
-	ms.listener = l
-	mux := cmux.New(l)
-	ms.HTTPListener = &util.Listener{
-		Listener:     mux.Match(cmux.HTTP1Fast()),
-		ReadTimeout:  timeout,
-		WriteTimeout: timeout,
-	}
-	ms.RaftListener = mux.Match(cmux.Any())
-
-	if !util.StrInSlice(clusters, addr) {
-		return nil
-	}
-
-	advertise, err := net.ResolveTCPAddr("tcp", addr)
-	if err != nil {
-		return nil
-	}
-	layer := raftlayer.NewRaftLayer(ms.RaftListener, advertise)
-	trans := raft.NewNetworkTransport(
-		layer,
-		len(clusters),
-		time.Second,
-		os.Stderr,
-	)
-
-	fsm := raftlayer.NewFSM()
-
-	// setup raft
-	raft, err := raftlayer.NewRaft(metaFolder, fsm, trans, clusters, time.Second, 5)
-	if err != nil {
-		// TODO log err
-		return nil
-	}
-
-	ms.raftLayer = layer
-	ms.raftTrans = trans
-	ms.raft = raft
-	ms.fsm = fsm
-	ms.mux = mux
+func NewMasterServer(raft *raftlayer.RaftServer, pulse int) *MasterServer {
+	ms := &MasterServer{}
+	ms.Topo = topology.NewTopology(raft, pulse) //  TODO fix seq
 
 	return ms
 }
 
 func (ms *MasterServer) SetMasterServer(r *mux.Router) {
-	ms.Topo = topology.NewTopology(ms.raft, nil, ms.pulseSeconds) //  TODO fix seq
-
 	//r.HandleFunc("/", ms.uiStatusHandler) r.HandleFunc("/ui/index.html", ms.uiStatusHandler)
 	//r.HandleFunc("/dir/status", ms.proxyToLeader(ms.dirStatusHandler))
 	//r.HandleFunc("/vol/grow",   ms.proxyToLeader(ms.volumeGrowHandler))
@@ -119,16 +57,10 @@ func (ms *MasterServer) SetMasterServer(r *mux.Router) {
 }
 
 func (ms *MasterServer) Serve() error {
-	go ms.mux.Serve()
 	return nil
 }
 
 func (ms *MasterServer) Close() error {
-	ms.raftLayer.Close()
-	ms.raftTrans.Close()
-	ret := ms.raft.Shutdown()
-	// wait raft shutdown
-	ret.Error()
 	ms.listener.Close()
 	return nil
 }
@@ -136,8 +68,8 @@ func (ms *MasterServer) Close() error {
 func (ms *MasterServer) clusterStatusHandler(w http.ResponseWriter, r *http.Request) {
 	// leader 放最前面
 	ret := operation.ClusterStatusResult{
-		Leader:   ms.addr,
-		Clusters: ms.clusters,
+		Leader:   ms.Topo.Raft.Leader(),
+		Clusters: ms.Topo.Raft.Peers(),
 	}
 	writeJsonQuiet(w, r, http.StatusOK, ret)
 }

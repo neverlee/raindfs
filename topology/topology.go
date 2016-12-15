@@ -10,7 +10,6 @@ import (
 	"raindfs/storage"
 	"raindfs/util"
 
-	"github.com/hashicorp/raft"
 	"github.com/neverlee/glog"
 )
 
@@ -18,18 +17,15 @@ type Topology struct {
 	nodemap      *DataNodeMap
 	volumeLayout *VolumeLayout
 
-	fsm *raftlayer.FSM
-
 	pulse int
 
-	raft *raft.Raft
+	Raft *raftlayer.RaftServer
 	//chanDeadDataNodes, chanRecoveredDataNodes *DataNode, chanFullVolumes storage.VolumeInfo
 }
 
-func NewTopology(raft *raft.Raft, fsm *raftlayer.FSM, pulse int) *Topology {
+func NewTopology(raft *raftlayer.RaftServer, pulse int) *Topology {
 	t := &Topology{}
-	t.raft = raft
-	t.fsm = fsm
+	t.Raft = raft
 	t.pulse = pulse
 
 	t.nodemap = NewDataNodeMap()
@@ -39,24 +35,17 @@ func NewTopology(raft *raft.Raft, fsm *raftlayer.FSM, pulse int) *Topology {
 }
 
 func (t *Topology) IsLeader() bool {
-	return t.raft.State() != raft.Leader
+	return t.Raft.IsLeader()
 }
 
 func (t *Topology) PeekVolumeId() storage.VolumeId {
-	return storage.VolumeId(t.fsm.Peek())
+	return storage.VolumeId(t.Raft.GetVid())
 }
 
 func (t *Topology) UpVolumeId(i uint32) (storage.VolumeId, error) {
-	if t.raft.State() != raft.Leader {
-		return 0, errors.New("not leader")
-	}
-
-	req := raftlayer.Request{Action: 0, Key: i}
-	f := t.raft.Apply(req.Encode(), time.Second*4)
-	err := f.Error()
+	vid, err := t.Raft.Apply(0, 1)
 	if err == nil {
-		ri := f.Response().(uint32)
-		return storage.VolumeId(ri), nil
+		return storage.VolumeId(vid), nil
 	}
 	return 0, err
 }

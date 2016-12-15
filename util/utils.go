@@ -31,12 +31,3 @@ func RandTwo(n int) []int {
 	}
 	return []int{a, b}
 }
-
-func StrInSlice(ay []string, a string) bool {
-	for _, e := range ay {
-		if e == a {
-			return true
-		}
-	}
-	return false
-}
