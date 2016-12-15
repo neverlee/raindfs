@@ -26,7 +26,8 @@ import (
 )
 
 type MasterServer struct {
-	port         int
+	addr         string
+	clusters     []string
 	metaFolder   string
 	pulseSeconds int
 
@@ -48,9 +49,9 @@ type MasterServer struct {
 	//bounedLeaderChan chan int
 }
 
-func NewMaster(l net.Listener, r *mux.Router, port int, metaFolder string, pulseSeconds int, timeout time.Duration) *MasterServer {
+func NewMaster(l net.Listener, r *mux.Router, addr string, bindall bool, single bool, clusters []string, metaFolder string, pulseSeconds int, timeout time.Duration) *MasterServer {
 	ms := &MasterServer{
-		port:         port,
+		addr:         addr,
 		metaFolder:   metaFolder,
 		pulseSeconds: pulseSeconds,
 		router:       r,
@@ -60,8 +61,8 @@ func NewMaster(l net.Listener, r *mux.Router, port int, metaFolder string, pulse
 	mux := cmux.New(l)
 	ms.HTTPListener = &util.Listener{
 		Listener:     mux.Match(cmux.HTTP1Fast()),
-		ReadTimeout:  5 * time.Second, // TODO set timeout
-		WriteTimeout: 5 * time.Second,
+		ReadTimeout:  timeout,
+		WriteTimeout: timeout,
 	}
 	ms.RaftListener = mux.Match(cmux.Any())
 
@@ -75,7 +76,6 @@ func NewMaster(l net.Listener, r *mux.Router, port int, metaFolder string, pulse
 	fsm := raftlayer.NewFSM()
 
 	// setup raft
-	clusters := []string{} // TODO peers
 	raft, err := raftlayer.NewRaft(metaFolder, fsm, trans, clusters, false, time.Second, 5)
 	if err != nil {
 		// TODO log err
@@ -133,11 +133,10 @@ func (ms *MasterServer) Close() error {
 }
 
 func (m *MasterServer) clusterStatusHandler(w http.ResponseWriter, r *http.Request) {
-	hi := fmt.Sprintf("127.0.0.1:%d", m.port)
 	// leader 放最前面
 	ret := operation.ClusterStatusResult{
-		Leader:   hi,
-		Clusters: []string{hi},
+		Leader:   m.addr,
+		Clusters: m.clusters,
 	}
 	writeJsonQuiet(w, r, http.StatusOK, ret)
 }
