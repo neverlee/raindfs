@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
-	"time"
 
 	"raindfs/operation"
 	"raindfs/raftlayer"
@@ -61,6 +60,7 @@ func (ms *MasterServer) Serve() error {
 }
 
 func (ms *MasterServer) Close() error {
+	ms.Topo.Raft.Close()
 	ms.listener.Close()
 	return nil
 }

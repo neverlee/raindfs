@@ -92,15 +92,16 @@ func runMaster(cmd *Command, args []string) bool {
 		return false
 	}
 
-	mux := cmux.New(listener)
+	lmux := cmux.New(listener)
 	HTTPListener := &util.Listener{
-		Listener:     mux.Match(cmux.HTTP1Fast()),
+		Listener:     lmux.Match(cmux.HTTP1Fast()),
 		ReadTimeout:  timeout,
 		WriteTimeout: timeout,
 	}
-	RaftListener := mux.Match(cmux.Any())
+	RaftListener := lmux.Match(cmux.Any())
 
 	raftserver := raftlayer.NewRaftServer(RaftListener, addr, clusters, metaDir, pulse, timeout)
+	go lmux.Serve()
 
 	router := mux.NewRouter()
 	ms := server.NewMasterServer(raftserver, pulse)
@@ -112,7 +113,7 @@ func runMaster(cmd *Command, args []string) bool {
 
 	glog.V(0).Infoln("Start Seaweed Master", util.VERSION, "at", addr)
 
-	if e := http.Serve(ms.HTTPListener, router); e != nil {
+	if e := http.Serve(HTTPListener, router); e != nil {
 		glog.Fatalf("Fail to serve: %v", e)
 	}
 	return true
