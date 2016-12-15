@@ -11,6 +11,7 @@ import (
 
 	"raindfs/operation"
 	"raindfs/raftlayer"
+	"raindfs/sequence"
 	"raindfs/storage"
 	"raindfs/topology"
 	"raindfs/util"
@@ -26,6 +27,7 @@ type MasterServer struct {
 	metaFolder   string
 	pulseSeconds int
 
+	seq  *sequence.Sequencer
 	Topo *topology.Topology
 
 	raftLayer *raftlayer.RaftLayer
@@ -73,6 +75,7 @@ func NewMasterServer(l net.Listener, addr string, bindall bool, clusters []strin
 		time.Second,
 		os.Stderr,
 	)
+
 	fsm := raftlayer.NewFSM()
 
 	// setup raft
@@ -92,7 +95,7 @@ func NewMasterServer(l net.Listener, addr string, bindall bool, clusters []strin
 }
 
 func (ms *MasterServer) SetMasterServer(r *mux.Router) {
-	ms.Topo = topology.NewTopology(nil, ms.pulseSeconds) //  TODO fix seq
+	ms.Topo = topology.NewTopology(ms.raft, nil, ms.pulseSeconds) //  TODO fix seq
 
 	//r.HandleFunc("/", ms.uiStatusHandler) r.HandleFunc("/ui/index.html", ms.uiStatusHandler)
 	//r.HandleFunc("/dir/status", ms.proxyToLeader(ms.dirStatusHandler))

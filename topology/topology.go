@@ -6,10 +6,11 @@ import (
 	"time"
 
 	"raindfs/operation"
-	"raindfs/sequence"
+	"raindfs/raftlayer"
 	"raindfs/storage"
 	"raindfs/util"
 
+	"github.com/hashicorp/raft"
 	"github.com/neverlee/glog"
 )
 
@@ -17,16 +18,19 @@ type Topology struct {
 	nodemap      *DataNodeMap
 	volumeLayout *VolumeLayout
 
-	pulse    int
-	sequence *sequence.Sequencer
+	fsm *raftlayer.FSM
 
+	pulse int
+
+	raft *raft.Raft
 	//chanDeadDataNodes, chanRecoveredDataNodes *DataNode, chanFullVolumes storage.VolumeInfo
 }
 
-func NewTopology(seq *sequence.Sequencer, pulse int) *Topology {
+func NewTopology(raft *raft.Raft, fsm *raftlayer.FSM, pulse int) *Topology {
 	t := &Topology{}
+	t.raft = raft
+	t.fsm = fsm
 	t.pulse = pulse
-	t.sequence = seq
 
 	t.nodemap = NewDataNodeMap()
 	t.volumeLayout = NewVolumeLayout()
@@ -35,7 +39,26 @@ func NewTopology(seq *sequence.Sequencer, pulse int) *Topology {
 }
 
 func (t *Topology) IsLeader() bool {
-	return true
+	return t.raft.State() != raft.Leader
+}
+
+func (t *Topology) PeekVolumeId() storage.VolumeId {
+	return storage.VolumeId(t.fsm.Peek())
+}
+
+func (t *Topology) UpVolumeId(i uint32) (storage.VolumeId, error) {
+	if t.raft.State() != raft.Leader {
+		return 0, errors.New("not leader")
+	}
+
+	req := raftlayer.Request{Action: 0, Key: i}
+	f := t.raft.Apply(req.Encode(), time.Second*4)
+	err := f.Error()
+	if err == nil {
+		ri := f.Response().(uint32)
+		return storage.VolumeId(ri), nil
+	}
+	return 0, err
 }
 
 func (t *Topology) StartRefreshWritableVolumes() {
@@ -54,7 +77,11 @@ func (t *Topology) StartRefreshWritableVolumes() {
 			if t.IsLeader() {
 				nodes := t.nodemap.CollectNodeNeedNewVolume()
 				for i := 0; i < len(nodes); i += 2 {
-					ivid, _ := t.sequence.NextId(1)
+					ivid, uverr := t.UpVolumeId(1)
+					if uverr != nil {
+						continue
+					}
+
 					vid := storage.VolumeId(ivid)
 					if ainfo, aerr := nodes[i].AssignVolume(vid); aerr == nil {
 						glog.V(0).Infoln("Assign New Volume", vid, nodes[i].Url(), ainfo, aerr)
@@ -88,11 +115,6 @@ func (t *Topology) Lookup(vid storage.VolumeId) []*DataNode {
 	return t.volumeLayout.Lookup(vid)
 }
 
-func (t *Topology) NextVolumeId() storage.VolumeId {
-	_, r := t.sequence.NextId(1)
-	return storage.VolumeId(r)
-}
-
 func (t *Topology) HasWritableVolume() bool {
 	return t.volumeLayout.ActiveVolumeCount() > 0
 }
@@ -105,7 +127,10 @@ func (t *Topology) PickForWrite() (storage.VolumeId, *VolumeLocationList, error)
 	wnodes := t.nodemap.GetWritableNodes()
 	if len(wnodes) >= replicate {
 		idx := util.RandTwo(len(wnodes))
-		ivid, _ := t.sequence.NextId(1)
+		ivid, uperr := t.UpVolumeId(1)
+		if uperr != nil {
+			return 0, nil, uperr
+		}
 		vid := storage.VolumeId(ivid)
 		var nodelist []*DataNode
 		for _, id := range idx {
@@ -161,11 +186,6 @@ func (t *Topology) ProcessJoinMessage(joinMessage *operation.JoinMessage) *opera
 	// 返回主master ip
 	var jmsg operation.JoinMessage
 	return &jmsg
-}
-
-func (t *Topology) GetMaxVolumeId() storage.VolumeId {
-	r := t.sequence.Peek()
-	return storage.VolumeId(r)
 }
 
 type TopologyData struct {

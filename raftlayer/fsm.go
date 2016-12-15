@@ -34,10 +34,7 @@ type FSM struct {
 }
 
 func NewFSM() *FSM {
-	fsm := FSM{
-		seq: sequence.NewSequencer(),
-	}
-	return &fsm
+	return &FSM{seq: sequence.NewSequencer()}
 }
 
 func (f *FSM) Apply(l *raft.Log) interface{} {
@@ -47,14 +44,18 @@ func (f *FSM) Apply(l *raft.Log) interface{} {
 	}
 	switch req.Action {
 	case 0: // OpNext
-		f.seq.NextId(req.Key)
-		return nil
+		r, _ := f.seq.NextId(req.Key)
+		return r
 	case 1: // OpSetMax
-		f.seq.SetMax(req.Key)
-		return nil
+		r := f.seq.SetMax(req.Key)
+		return r
 	default:
 		return errBadAction
 	}
+}
+
+func (f *FSM) Peek() uint32 {
+	return f.seq.Peek()
 }
 
 // fsmSnapshot implement FSMSnapshot interface
