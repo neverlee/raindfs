@@ -31,8 +31,6 @@ type MasterServer struct {
 	metaFolder   string
 	pulseSeconds int
 
-	router *mux.Router
-
 	Topo *topology.Topology
 
 	raftLayer *raftlayer.RaftLayer
@@ -49,12 +47,11 @@ type MasterServer struct {
 	//bounedLeaderChan chan int
 }
 
-func NewMaster(l net.Listener, r *mux.Router, addr string, bindall bool, single bool, clusters []string, metaFolder string, pulseSeconds int, timeout time.Duration) *MasterServer {
+func NewMasterServer(l net.Listener, addr string, bindall bool, clusters []string, metaFolder string, pulse int, timeout time.Duration) *MasterServer {
 	ms := &MasterServer{
 		addr:         addr,
 		metaFolder:   metaFolder,
-		pulseSeconds: pulseSeconds,
-		router:       r,
+		pulseSeconds: pulse,
 	}
 
 	ms.listener = l
@@ -66,17 +63,25 @@ func NewMaster(l net.Listener, r *mux.Router, addr string, bindall bool, single 
 	}
 	ms.RaftListener = mux.Match(cmux.Any())
 
-	layer := raftlayer.NewRaftLayer(ms.RaftListener)
+	if !util.StrInSlice(clusters, addr) {
+		return nil
+	}
+
+	advertise, err := net.ResolveTCPAddr("tcp", addr)
+	if err != nil {
+		return nil
+	}
+	layer := raftlayer.NewRaftLayer(ms.RaftListener, advertise)
 	trans := raft.NewNetworkTransport(
 		layer,
-		5,
+		len(clusters),
 		time.Second,
 		os.Stderr,
 	)
 	fsm := raftlayer.NewFSM()
 
 	// setup raft
-	raft, err := raftlayer.NewRaft(metaFolder, fsm, trans, clusters, false, time.Second, 5)
+	raft, err := raftlayer.NewRaft(metaFolder, fsm, trans, clusters, time.Second, 5)
 	if err != nil {
 		// TODO log err
 		return nil

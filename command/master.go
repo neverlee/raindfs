@@ -28,8 +28,7 @@ var cmdMaster = &Command{
 type masterServerOption struct {
 	addr       *string
 	bindAll    *bool
-	single     *bool
-	metaFolder *string
+	metaDir    *string
 	clusters   *string
 	pulse      *int
 	timeout    *int
@@ -44,8 +43,7 @@ func init() {
 	msopt = masterServerOption{
 		addr:       cmdMaster.Flag.String("addr", "0.0.0.0:10000", "address to bind to"),
 		bindAll:    cmdMaster.Flag.Bool("bindall", true, "bind address to 0.0.0.0 default except one ip"),
-		metaFolder: cmdMaster.Flag.String("mdir", "./meta", "data directory to store meta data"),
-		single:     cmdMaster.Flag.Bool("single", false, "run with single node mode"),
+		metaDir:    cmdMaster.Flag.String("mdir", "./meta", "data directory to store meta data"),
 		clusters:   cmdMaster.Flag.String("clusters", "", "master nodes in comma separated ip:port list, example: 127.0.0.1:9093,127.0.0.1:9094"),
 		pulse:      cmdMaster.Flag.Int("pulseseconds", 5, "number of seconds between heartbeats"),
 		timeout:    cmdMaster.Flag.Int("idletimeout", 10, "connection idle seconds"),
@@ -72,28 +70,36 @@ func runMaster(cmd *Command, args []string) bool {
 
 	addr := *msopt.addr
 	bindall := *msopt.bindAll
-	single := *msopt.single
 	clusters := strings.Split(*msopt.clusters, ",")
-	metaFolder := *msopt.metaFolder
+	metaDir := *msopt.metaDir
 	pulse := *msopt.pulse
 	timeout := time.Duration(*msopt.timeout) * time.Second
-	if err := util.MkdirOrExist(metaFolder); err != nil {
-		glog.Fatalf("Check Meta Folder (-mdir) Writable %s : %s", metaFolder, err)
+	if err := util.MkdirOrExist(metaDir); err != nil {
+		glog.Fatalf("Check Meta Folder (-mdir) Writable %s : %s", metaDir, err)
 	}
 
-	listener, err := net.Listen("tcp", addr)
+	baddr := addr
+	if bindall {
+		ipport := strings.Split(addr, ":")
+		baddr = "0.0.0.0:" + ipport[1]
+	}
+
+	listener, err := net.Listen("tcp", baddr)
 	if err != nil {
 		glog.Fatalf("Master startup error: %v", err)
 		return false
 	}
 
 	router := mux.NewRouter()
-	ms := server.NewMaster(listener, router, addr, bindall, single, clusters, metaFolder, pulse, timeout)
+	ms := server.NewMasterServer(listener, addr, bindall, clusters, metaDir, pulse, timeout)
+	if ms == nil {
+		glog.Fatalf("Fail to serve")
+	}
 	ms.SetMasterServer(router)
 
 	glog.V(0).Infoln("Start Seaweed Master", util.VERSION, "at", addr)
 
-	if e := http.Serve(listener, router); e != nil {
+	if e := http.Serve(ms.HTTPListener, router); e != nil {
 		glog.Fatalf("Fail to serve: %v", e)
 	}
 	return true

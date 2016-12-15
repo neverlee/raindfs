@@ -25,7 +25,7 @@ func NewRequest(data []byte) (*Request, error) {
 }
 
 func (r *Request) Encode() []byte {
-	blob, err := json.Marshal(r)
+	blob, _ := json.Marshal(r)
 	return blob
 }
 

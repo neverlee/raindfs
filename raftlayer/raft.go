@@ -20,25 +20,16 @@ type RaftLayer struct {
 	advertise net.Addr
 }
 
-func NewRaftLayer(l net.Listener) *RaftLayer {
+func NewRaftLayer(l net.Listener, addr net.Addr) *RaftLayer {
 	// advertise net.Addr,
 	return &RaftLayer{
-		listener: l,
-		// advertise: advertise,
+		listener:  l,
+		advertise: addr,
 	}
 }
 
 func (t *RaftLayer) Dial(address string, timeout time.Duration) (net.Conn, error) {
-	conn, err := net.DialTimeout("tcp", address, timeout)
-	if err != nil {
-		return nil, err
-	}
-	_, err = conn.Write([]byte{RaftProto})
-	if err != nil {
-		conn.Close()
-		return nil, err
-	}
-	return conn, nil
+	return net.DialTimeout("tcp", address, timeout)
 }
 
 // Accept implements the net.Listener interface.
@@ -60,7 +51,7 @@ func (t *RaftLayer) Addr() net.Addr {
 	return t.listener.Addr()
 }
 
-func NewRaft(path string, fsm raft.FSM, trans raft.Transport, clusters []string, singleNode bool, interval time.Duration, threshold uint64) (*raft.Raft, error) {
+func NewRaft(path string, fsm raft.FSM, trans raft.Transport, clusters []string, interval time.Duration, threshold uint64) (*raft.Raft, error) {
 	raftLogDir := filepath.Join(path, "log.db")
 	raftMetaDir := filepath.Join(path, "meta.db")
 
@@ -79,33 +70,26 @@ func NewRaft(path string, fsm raft.FSM, trans raft.Transport, clusters []string,
 		return nil, err
 	}
 
-	peerStore := raft.NewJSONPeers(path, trans)
-
-	//if c.Raft.ClusterState == ClusterStateNew {
-	//	log.Infof("cluster state is new, use new cluster config")
-	//	r.peerStore.SetPeers(peers)
-	//} else {
-	ps, err := peerStore.Peers()
-	if err != nil {
-		fmt.Println("get store peers error %v", err)
-		return nil, err
-	}
-	for _, peer := range clusters {
-		ps = raft.AddUniquePeer(ps, peer)
-	}
-
-	fmt.Println("setpeers", ps)
-	peerStore.SetPeers(ps)
-	//}
-
-	//if peers, _ := r.peerStore.Peers(); len(peers) <= 1 {
-	//	cfg.EnableSingleNode = true
-	//}
-
 	raftConfig := raft.DefaultConfig()
 	raftConfig.SnapshotInterval = time.Duration(interval)
 	raftConfig.SnapshotThreshold = threshold
-	raftConfig.EnableSingleNode = singleNode
+
+	peerStore := raft.NewJSONPeers(path, trans)
+
+	if len(clusters) > 1 {
+		ps, err := peerStore.Peers()
+		if err != nil {
+			fmt.Println("get store peers error %v", err)
+			return nil, err
+		}
+		for _, peer := range clusters {
+			ps = raft.AddUniquePeer(ps, peer)
+		}
+
+		peerStore.SetPeers(ps)
+	} else {
+		raftConfig.EnableSingleNode = true
+	}
 
 	err = raft.ValidateConfig(raftConfig)
 	if err != nil {
