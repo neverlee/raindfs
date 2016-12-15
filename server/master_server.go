@@ -25,10 +25,6 @@ import (
 	"github.com/soheilhy/cmux"
 )
 
-const (
-	seqFileName = "seq.json"
-)
-
 type MasterServer struct {
 	port         int
 	metaFolder   string
@@ -43,8 +39,9 @@ type MasterServer struct {
 	raft      *raft.Raft
 
 	fsm *raftlayer.FSM
-	mux *util.Mux
+	mux cmux.CMux
 
+	listener     net.Listener
 	RaftListener net.Listener
 	HTTPListener *util.Listener //net.Listener
 	//vgLock sync.Mutex
@@ -59,13 +56,14 @@ func NewMaster(l net.Listener, r *mux.Router, port int, metaFolder string, pulse
 		router:       r,
 	}
 
-	mux := util.NewMux(l)
-	ms.RaftListener = mux.HandleByte(raftlayer.RaftProto)
+	ms.listener = l
+	mux := cmux.New(l)
 	ms.HTTPListener = &util.Listener{
-		Listener:     mux.HandleThird(cmux.HTTP1()),
+		Listener:     mux.Match(cmux.HTTP1Fast()),
 		ReadTimeout:  5 * time.Second, // TODO set timeout
 		WriteTimeout: 5 * time.Second,
 	}
+	ms.RaftListener = mux.Match(cmux.Any())
 
 	layer := raftlayer.NewRaftLayer(ms.RaftListener)
 	trans := raft.NewNetworkTransport(
@@ -130,8 +128,8 @@ func (ms *MasterServer) Close() error {
 	ret := ms.raft.Shutdown()
 	// wait raft shutdown
 	ret.Error()
-	// s.fsm.Close()
-	return ms.mux.Close()
+	ms.listener.Close()
+	return nil
 }
 
 func (m *MasterServer) clusterStatusHandler(w http.ResponseWriter, r *http.Request) {
