@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"strings"
 
 	"raindfs/operation"
 	"raindfs/raftlayer"
@@ -88,8 +89,11 @@ func (ms *MasterServer) nodeJoinHandler(w http.ResponseWriter, r *http.Request) 
 		fmt.Fprint(w, string(blob))
 		var jmsg operation.JoinMessage
 		if jerr := json.Unmarshal(blob, &jmsg); jerr == nil {
-			jmsg.Addr = r.RemoteAddr
-			//if strings.HasPrefix(jmsg.Ip, "0.0.0.0") || strings.HasPrefix(jmsg.Ip, "[::]")
+			if strings.HasPrefix(jmsg.Addr, "0.0.0.0") { // strings.HasPrefix(jmsg.Ip, "[::]")
+				inaddr := strings.Split(r.RemoteAddr, ":")
+				upaddr := strings.Split(jmsg.Addr, ":")
+				jmsg.Addr = fmt.Sprintf("%s:%s", inaddr[0], upaddr[1])
+			}
 			ms.Topo.ProcessJoinMessage(&jmsg)
 		}
 	}
