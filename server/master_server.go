@@ -32,7 +32,6 @@ func NewMasterServer(raft *raftlayer.RaftServer, pulse int) *MasterServer {
 }
 
 func (ms *MasterServer) SetMasterServer(r *mux.Router) {
-	//r.HandleFunc("/", ms.uiStatusHandler) r.HandleFunc("/ui/index.html", ms.uiStatusHandler)
 	//r.HandleFunc("/dir/status", ms.proxyToLeader(ms.dirStatusHandler))
 	//r.HandleFunc("/vol/grow",   ms.proxyToLeader(ms.volumeGrowHandler))
 	//r.HandleFunc("/vol/status", ms.proxyToLeader(ms.volumeStatusHandler))
@@ -48,7 +47,7 @@ func (ms *MasterServer) SetMasterServer(r *mux.Router) {
 	r.HandleFunc("/stats/counter", statsCounterHandler)
 	r.HandleFunc("/stats/memory", statsMemoryHandler)
 
-	r.HandleFunc("/test", ms.testHandler)
+	r.HandleFunc("/ping", ms.pingHandler)
 
 	ms.Topo.StartRefreshWritableVolumes()
 }
@@ -73,11 +72,6 @@ func (ms *MasterServer) clusterStatusHandler(w http.ResponseWriter, r *http.Requ
 }
 
 func (ms *MasterServer) statsNodesHandler(w http.ResponseWriter, r *http.Request) {
-	ret := ms.Topo.ToData()
-	writeJsonQuiet(w, r, http.StatusOK, ret)
-}
-
-func (ms *MasterServer) testHandler(w http.ResponseWriter, r *http.Request) {
 	ret := ms.Topo.ToData()
 	writeJsonQuiet(w, r, http.StatusOK, ret)
 }
@@ -129,4 +123,10 @@ func (ms *MasterServer) pickVolumeHandler(w http.ResponseWriter, r *http.Request
 			writeJsonError(w, r, http.StatusOK, err)
 		}
 	}
+}
+
+func (ms *MasterServer) pingHandler(w http.ResponseWriter, r *http.Request) {
+	ret := ms.Topo.ToData()
+	writeJsonQuiet(w, r, http.StatusOK, ret)
+	//writeJsonQuiet(w, r, http.StatusOK, "ping")
 }

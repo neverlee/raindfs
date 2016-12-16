@@ -15,15 +15,15 @@ func NewSwitchServer(mserver []string, r *mux.Router) *SwitchServer {
 		mserver: mserver,
 	}
 
-	r.HandleFunc("/test", ss.testHandler)
 	//r.HandleFunc("/admin/put/{fid}", ms.putHandler)
 	//r.HandleFunc("/admin/get/{fid}", ms.getHandler)
+	r.HandleFunc("/ping", ss.pingHandler)
 
 	return ss
 }
 
-func (ss *SwitchServer) testHandler(w http.ResponseWriter, r *http.Request) {
-	writeJsonQuiet(w, r, http.StatusOK, ss.mserver)
+func (ss *SwitchServer) pingHandler(w http.ResponseWriter, r *http.Request) {
+	writeJsonQuiet(w, r, http.StatusOK, "ping")
 }
 
 //func (ss *SwitchServer) putHandler(w http.ResponseWriter, r *http.Request) {
