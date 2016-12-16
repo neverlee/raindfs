@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/raft"
+	"github.com/neverlee/glog"
 )
 
 func strInSlice(ay []string, a string) bool {
@@ -39,6 +40,9 @@ func NewRaftServer(listener net.Listener, addr string, clusters []string, metaFo
 		listener:     listener,
 	}
 
+	if len(clusters) < 1 {
+		clusters = []string{addr}
+	}
 	if !strInSlice(clusters, addr) {
 		return nil
 	}

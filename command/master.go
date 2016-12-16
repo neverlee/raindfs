@@ -72,7 +72,7 @@ func runMaster(cmd *Command, args []string) bool {
 
 	addr := *msopt.addr
 	bindall := *msopt.bindAll
-	clusters := strings.Split(*msopt.clusters, ",")
+	clusters := util.StrSplit(*msopt.clusters, ",")
 	metaDir := *msopt.metaDir
 	pulse := *msopt.pulse
 	timeout := time.Duration(*msopt.timeout) * time.Second

@@ -31,3 +31,15 @@ func RandTwo(n int) []int {
 	}
 	return []int{a, b}
 }
+
+func StrSplit(str string, seq string) []string {
+	ay := strings.Split(str, seq)
+	j := 0
+	for i := 0; i < len(ay); i++ {
+		if ay[i] != "" {
+			ay[j] = ay[i]
+			j++
+		}
+	}
+	return ay[:j]
+}
