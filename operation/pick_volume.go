@@ -14,7 +14,7 @@ type PickResult struct {
 }
 
 func PickVolume(server string) (*PickResult, error) {
-	jsonBlob, err := util.Get("http://" + server + "/volume/pick")
+	jsonBlob, err := util.Get("http://" + server + "/ms/vol/_pick")
 	if err != nil {
 		return nil, err
 	}

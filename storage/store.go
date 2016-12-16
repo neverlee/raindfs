@@ -67,7 +67,7 @@ func (s *Store) SendHeartbeatToMaster() (masterNode []string, e error) {
 	}
 
 	for _, m := range s.mserver {
-		joinUrl := "http://" + m + "/node/join"
+		joinUrl := "http://" + m + "/ms/node/join"
 		glog.V(4).Infof("Connecting to %s ...", joinUrl)
 
 		go util.PostBytes(joinUrl, data)

@@ -30,7 +30,7 @@ rain server
 ## MasterServer
 ### 原始api
 * /ms/node/join            post 心路node加入
-* /ms/node/stats           get  所有node 状态
+* /ms/node/stats           get  所有node 状态 暂时不需要
 * /ms/vol/{vid}            get  获取vid地址
 * /ms/vol/_pick            get  获取可写vid
 * /ms/stats

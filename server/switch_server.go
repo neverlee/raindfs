@@ -14,9 +14,12 @@ func NewSwitchServer(mserver []string, r *mux.Router) *SwitchServer {
 	ss := &SwitchServer{
 		mserver: mserver,
 	}
-
-	//r.HandleFunc("/admin/put/{fid}", ms.putHandler)
-	//r.HandleFunc("/admin/get/{fid}", ms.getHandler)
+	//* /ss/fs/{vid}/{fid} get 下载文件
+	//* /ss/fs/{vid}/{fid} put 上传文件
+	//* /ss/fs/{vid}/{fid} post multipart方式上传
+	//* /vs/stats
+	//r.HandleFunc("/ss/fs/{vid}/{fid}", ms.putHandler)
+	//r.HandleFunc("/ss/fs/{vid}/{fid}", ms.getHandler)
 	r.HandleFunc("/ping", ss.pingHandler)
 
 	return ss
