@@ -98,15 +98,6 @@ func (l *DiskLocation) DeleteVolume(vid VolumeId) {
 	delete(l.volumes, vid)
 }
 
-func (l *DiskLocation) PickWritableVolume() *Volume {
-	l.mutex.Lock()
-	l.mutex.Unlock()
-	for _, v := range l.volumes {
-		return v
-	}
-	return nil
-}
-
 func (l *DiskLocation) ToMap() []*VolumeInfo {
 	l.mutex.Lock()
 	l.mutex.Unlock()

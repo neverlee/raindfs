@@ -43,3 +43,8 @@ func StrSplit(str string, seq string) []string {
 	}
 	return ay[:j]
 }
+
+//func GenFileId() *FileId {
+//	key := binary.LittleEndian.Uint64(uuid.NewV4().Bytes())
+//	return NewFileId(v.Id, key)
+//}

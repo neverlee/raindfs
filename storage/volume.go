@@ -11,8 +11,6 @@ import (
 	"path"
 	"strconv"
 	"sync"
-
-	"github.com/satori/go.uuid"
 )
 
 const (
@@ -101,11 +99,6 @@ func (v *Volume) Close() {
 	v.mutex.Lock()
 	defer v.mutex.Unlock()
 	v.dump(v.MetaPath())
-}
-
-func (v *Volume) GenFileId() *FileId {
-	key := binary.LittleEndian.Uint64(uuid.NewV4().Bytes())
-	return NewFileId(v.Id, key)
 }
 
 func (v *Volume) SaveFile(fid *FileId, fsize int, flag byte, r io.Reader) (*Needle, error) {

@@ -38,7 +38,6 @@ func NewVolumeServer(addr string, data string, mserver []string, r *mux.Router, 
 	r.HandleFunc("/status", vs.statusHandler)
 	r.HandleFunc("/admin/assign_volume/{vid}", vs.assignVolumeHandler)
 	r.HandleFunc("/admin/delete_volume/{vid}", vs.deleteVolumeHandler)
-	r.HandleFunc("/admin/assign_fileid", vs.assignFileidHandler)
 	r.HandleFunc("/admin/put/{fid}", vs.putHandler)
 	r.HandleFunc("/admin/get/{fid}", vs.getHandler)
 	r.HandleFunc("/admin/delete/{fid}", vs.deleteHandler)
@@ -90,15 +89,6 @@ func (vs *VolumeServer) statusHandler(w http.ResponseWriter, r *http.Request) {
 	m["Version"] = util.VERSION
 	m["Volumes"] = vs.store.Status()
 	writeJsonQuiet(w, r, http.StatusOK, m)
-}
-
-func (vs *VolumeServer) assignFileidHandler(w http.ResponseWriter, r *http.Request) {
-	volume := vs.store.Location.PickWritableVolume()
-	fid := volume.GenFileId()
-	ret := operation.AssignResult{
-		Fid: fid.String(),
-	}
-	writeJsonQuiet(w, r, http.StatusOK, ret)
 }
 
 func (vs *VolumeServer) putHandler(w http.ResponseWriter, r *http.Request) {

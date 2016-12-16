@@ -12,7 +12,6 @@ import (
 	"raindfs/raftlayer"
 	"raindfs/storage"
 	"raindfs/topology"
-	"raindfs/util"
 
 	"github.com/gorilla/mux"
 )
@@ -40,7 +39,7 @@ func (ms *MasterServer) SetMasterServer(r *mux.Router) {
 	//r.HandleFunc("/vol/vacuum", ms.proxyToLeader(ms.volumeVacuumHandler))
 	//r.HandleFunc("/submit", ms.submitFromMasterServerHandler)
 
-	r.HandleFunc("/admin/assign_fileid", ms.assignFileidHandler)
+	r.HandleFunc("/volume/{vid}", ms.pickVolumeHandler)
 
 	r.HandleFunc("/node/join", ms.nodeJoinHandler) // proxy
 	r.HandleFunc("/cluster/status", ms.clusterStatusHandler)
@@ -99,16 +98,35 @@ func (ms *MasterServer) nodeJoinHandler(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-func (ms *MasterServer) assignFileidHandler(w http.ResponseWriter, r *http.Request) {
-	vid, _, err := ms.Topo.PickForWrite()
-	if err == nil {
-		key := util.GenID()
-		fid := storage.NewFileId(vid, key)
-		ret := operation.AssignResult{
-			Fid: fid.String(),
+func (ms *MasterServer) pickVolumeHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	vidstr := vars["vid"]
+	if vidstr == "_writable" {
+		vid, nodes, err := ms.Topo.PickForWrite()
+		if err == nil {
+			// key := util.GenID() fid := storage.NewFileId(vid, key)
+			ret := operation.PickResult{
+				Vid:   vid.String(),
+				Nodes: nodes.ToNameList(),
+			}
+			writeJsonQuiet(w, r, http.StatusOK, ret)
+		} else {
+			writeJsonError(w, r, http.StatusOK, err)
 		}
-		writeJsonQuiet(w, r, http.StatusOK, ret)
-		return
+	} else {
+		if vid, err := storage.NewVolumeId(vidstr); err == nil {
+			dns := ms.Topo.Lookup(vid)
+			nodes := make([]string, len(dns))
+			for i, dn := range dns {
+				nodes[i] = dn.Url()
+			}
+			ret := operation.PickResult{
+				Vid:   vid.String(),
+				Nodes: nodes,
+			}
+			writeJsonQuiet(w, r, http.StatusOK, ret)
+		} else {
+			writeJsonError(w, r, http.StatusOK, err)
+		}
 	}
-	writeJsonError(w, r, http.StatusOK, err)
 }
