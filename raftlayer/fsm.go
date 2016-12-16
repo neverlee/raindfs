@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"raindfs/sequence"
 
 	"github.com/hashicorp/raft"
 )
@@ -30,11 +29,11 @@ func (r *Request) Encode() []byte {
 }
 
 type FSM struct {
-	seq *sequence.Sequencer
+	seq *Sequencer
 }
 
 func NewFSM() *FSM {
-	return &FSM{seq: sequence.NewSequencer()}
+	return &FSM{seq: NewSequencer()}
 }
 
 func (f *FSM) Apply(l *raft.Log) interface{} {

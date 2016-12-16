@@ -32,12 +32,6 @@ func NewMasterServer(raft *raftlayer.RaftServer, pulse int) *MasterServer {
 }
 
 func (ms *MasterServer) SetMasterServer(r *mux.Router) {
-	//r.HandleFunc("/dir/status", ms.proxyToLeader(ms.dirStatusHandler))
-	//r.HandleFunc("/vol/grow",   ms.proxyToLeader(ms.volumeGrowHandler))
-	//r.HandleFunc("/vol/status", ms.proxyToLeader(ms.volumeStatusHandler))
-	//r.HandleFunc("/vol/vacuum", ms.proxyToLeader(ms.volumeVacuumHandler))
-	//r.HandleFunc("/submit", ms.submitFromMasterServerHandler)
-
 	r.HandleFunc("/volume/{vid}", ms.pickVolumeHandler)
 
 	r.HandleFunc("/node/join", ms.nodeJoinHandler) // proxy
@@ -52,10 +46,6 @@ func (ms *MasterServer) SetMasterServer(r *mux.Router) {
 	ms.Topo.StartRefreshWritableVolumes()
 }
 
-func (ms *MasterServer) Serve() error {
-	return nil
-}
-
 func (ms *MasterServer) Close() error {
 	ms.Topo.Raft.Close()
 	ms.listener.Close()
@@ -65,7 +55,7 @@ func (ms *MasterServer) Close() error {
 func (ms *MasterServer) clusterStatusHandler(w http.ResponseWriter, r *http.Request) {
 	// leader 放最前面
 	ret := operation.ClusterStatusResult{
-		Leader:   ms.Topo.Raft.Leader(),
+		//Leader:   ms.Topo.Raft.Leader(),
 		Clusters: ms.Topo.Raft.Peers(),
 	}
 	writeJsonQuiet(w, r, http.StatusOK, ret)

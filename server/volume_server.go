@@ -31,8 +31,8 @@ func NewVolumeServer(addr string, data string, mserver []string, r *mux.Router, 
 		pulseSeconds: pulseSeconds,
 		mserver:      mserver,
 	}
-	vs.store = storage.NewStore(addr, data)
-	vs.store.SetClusters(mserver)
+
+	vs.store = storage.NewStore(data, addr, mserver)
 
 	go vs.heartBeat()
 	r.HandleFunc("/status", vs.statusHandler)
@@ -265,6 +265,5 @@ func (vs *VolumeServer) Shutdown() {
 }
 
 func (v *VolumeServer) pingHandler(w http.ResponseWriter, r *http.Request) {
-	v.store.Test()
 	writeJsonQuiet(w, r, http.StatusOK, "ping")
 }
