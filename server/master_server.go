@@ -19,9 +19,7 @@ import (
 type MasterServer struct {
 	Topo *topology.Topology
 
-	listener     net.Listener
-	RaftListener net.Listener
-	HTTPListener *util.Listener //net.Listener
+	listener net.Listener
 	//vgLock sync.Mutex
 	//bounedLeaderChan chan int
 }
@@ -91,8 +89,7 @@ func (ms *MasterServer) nodeJoinHandler(w http.ResponseWriter, r *http.Request) 
 		var jmsg operation.JoinMessage
 		if jerr := json.Unmarshal(blob, &jmsg); jerr == nil {
 			jmsg.Addr = r.RemoteAddr
-			//if strings.HasPrefix(jmsg.Ip, "0.0.0.0") || strings.HasPrefix(jmsg.Ip, "[::]") {
-			//}
+			//if strings.HasPrefix(jmsg.Ip, "0.0.0.0") || strings.HasPrefix(jmsg.Ip, "[::]")
 			ms.Topo.ProcessJoinMessage(&jmsg)
 		}
 	}

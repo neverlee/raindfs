@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/raft"
-	"github.com/neverlee/glog"
 )
 
 func strInSlice(ay []string, a string) bool {
@@ -20,9 +19,8 @@ func strInSlice(ay []string, a string) bool {
 }
 
 type RaftServer struct {
-	clusters     []string
-	metaFolder   string
-	pulseSeconds int
+	clusters   []string
+	metaFolder string
 
 	raft      *raft.Raft
 	raftLayer *RaftLayer
@@ -32,12 +30,11 @@ type RaftServer struct {
 	listener net.Listener
 }
 
-func NewRaftServer(listener net.Listener, addr string, clusters []string, metaFolder string, pulse int, timeout time.Duration) *RaftServer {
+func NewRaftServer(listener net.Listener, addr string, clusters []string, metaFolder string) *RaftServer {
 	rs := &RaftServer{
-		clusters:     clusters,
-		metaFolder:   metaFolder,
-		pulseSeconds: pulse,
-		listener:     listener,
+		clusters:   clusters,
+		metaFolder: metaFolder,
+		listener:   listener,
 	}
 
 	if len(clusters) < 1 {
@@ -64,7 +61,6 @@ func NewRaftServer(listener net.Listener, addr string, clusters []string, metaFo
 	// setup raft
 	raft, err := NewRaft(metaFolder, fsm, trans, clusters, time.Second, 5)
 	if err != nil {
-		// TODO log err
 		return nil
 	}
 

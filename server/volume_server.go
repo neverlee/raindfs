@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -21,18 +20,19 @@ import (
 )
 
 type VolumeServer struct {
-	masterNode   string
 	mnLock       sync.RWMutex
 	pulseSeconds int
+	mserver      []string
 	store        *storage.Store
 }
 
-func NewVolumeServer(addr string, data string, masters string, r *mux.Router, pulseSeconds int) *VolumeServer {
+func NewVolumeServer(addr string, data string, mserver []string, r *mux.Router, pulseSeconds int) *VolumeServer {
 	vs := &VolumeServer{
 		pulseSeconds: pulseSeconds,
+		mserver:      mserver,
 	}
 	vs.store = storage.NewStore(addr, data)
-	vs.store.SetClusters(strings.Split(masters, ","))
+	vs.store.SetClusters(mserver)
 
 	go vs.heartBeat()
 	r.HandleFunc("/status", vs.statusHandler)
@@ -47,8 +47,7 @@ func NewVolumeServer(addr string, data string, masters string, r *mux.Router, pu
 	r.HandleFunc("/stats/counter", statsCounterHandler)
 	r.HandleFunc("/stats/memory", statsMemoryHandler)
 	r.HandleFunc("/stats/disk", vs.statsDiskHandler)
-	r.HandleFunc("/test", vs.testHandler)
-	//r.HandleFunc("/", vs.privateStoreHandler)
+	r.HandleFunc("/ping", vs.pingHandler)
 
 	return vs
 }
@@ -256,7 +255,7 @@ func (vs *VolumeServer) heartBeat() {
 				glog.V(0).Infoln("Volume Server Connected with master at", master)
 			}
 		} else {
-			glog.V(1).Infof("Volume Server Failed to talk with master %s: %v", vs.masterNode, err)
+			glog.V(1).Infof("Volume Server Failed to talk with master %s: %v", vs.mserver, err)
 			if connected {
 				connected = false
 			}
@@ -275,7 +274,7 @@ func (vs *VolumeServer) Shutdown() {
 	glog.V(0).Infoln("Shut down successfully!")
 }
 
-func (v *VolumeServer) testHandler(w http.ResponseWriter, r *http.Request) {
+func (v *VolumeServer) pingHandler(w http.ResponseWriter, r *http.Request) {
 	v.store.Test()
-	writeJsonQuiet(w, r, http.StatusOK, "test")
+	writeJsonQuiet(w, r, http.StatusOK, "ping")
 }

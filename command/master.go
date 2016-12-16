@@ -100,7 +100,10 @@ func runMaster(cmd *Command, args []string) bool {
 	}
 	RaftListener := lmux.Match(cmux.Any())
 
-	raftserver := raftlayer.NewRaftServer(RaftListener, addr, clusters, metaDir, pulse, timeout)
+	raftserver := raftlayer.NewRaftServer(RaftListener, addr, clusters, metaDir)
+	if raftserver == nil {
+		glog.Fatalf("Fail to create raft serve")
+	}
 	go lmux.Serve()
 
 	router := mux.NewRouter()

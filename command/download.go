@@ -17,7 +17,7 @@ type DownloadOptions struct {
 
 func init() {
 	cmdDownload.Run = runDownload // break init cycle
-	d.server = cmdDownload.Flag.String("server", "localhost:9333", "RainDFS master location")
+	d.server = cmdDownload.Flag.String("sserver", "localhost:100200", "RainDFS switch location")
 	d.dir = cmdDownload.Flag.String("dir", ".", "Download the whole folder recursively if specified.")
 }
 

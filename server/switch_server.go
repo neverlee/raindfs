@@ -7,12 +7,12 @@ import (
 )
 
 type SwitchServer struct {
-	masterNode string
+	mserver []string
 }
 
-func NewSwitchServer(addr string, masters string, r *mux.Router) *SwitchServer {
+func NewSwitchServer(mserver []string, r *mux.Router) *SwitchServer {
 	ss := &SwitchServer{
-		masterNode: masters,
+		mserver: mserver,
 	}
 
 	r.HandleFunc("/test", ss.testHandler)
@@ -22,8 +22,8 @@ func NewSwitchServer(addr string, masters string, r *mux.Router) *SwitchServer {
 	return ss
 }
 
-func (sv *SwitchServer) testHandler(w http.ResponseWriter, r *http.Request) {
-	writeJsonQuiet(w, r, http.StatusOK, "test")
+func (ss *SwitchServer) testHandler(w http.ResponseWriter, r *http.Request) {
+	writeJsonQuiet(w, r, http.StatusOK, ss.mserver)
 }
 
 //func (ss *SwitchServer) putHandler(w http.ResponseWriter, r *http.Request) {

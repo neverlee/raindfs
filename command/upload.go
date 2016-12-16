@@ -4,14 +4,12 @@ import ()
 
 var (
 	upload struct {
-		server      *string
-		dir         *string
-		include     *string
-		replication *string
-		collection  *string
-		ttl         *string
-		maxMB       *int
-		secretKey   *string
+		server    *string
+		dir       *string
+		include   *string
+		ttl       *string
+		maxMB     *int
+		secretKey *string
 	}
 )
 
@@ -20,7 +18,6 @@ func init() {
 	cmdUpload.IsDebug = cmdUpload.Flag.Bool("debug", false, "verbose debug information")
 	upload.server = cmdUpload.Flag.String("server", "localhost:9333", "RainDFS master location")
 	upload.dir = cmdUpload.Flag.String("dir", "", "Upload the whole folder recursively if specified.")
-	upload.collection = cmdUpload.Flag.String("collection", "", "optional collection name")
 	upload.ttl = cmdUpload.Flag.String("ttl", "", "time to live, e.g.: 1m, 1h, 1d, 1M, 1y")
 	upload.maxMB = cmdUpload.Flag.Int("maxMB", 0, "split files larger than the limit")
 }

@@ -13,12 +13,12 @@ import (
 )
 
 type volumeServerOption struct {
-	addr                  *string
-	masters               *string
-	data                  *string
-	pulseSeconds          *int
-	idleConnectionTimeout *int
-	maxCpu                *int
+	addr         *string
+	mserver      *string
+	data         *string
+	pulseSeconds *int
+	timeout      *int
+	maxCpu       *int
 }
 
 var vsopt volumeServerOption
@@ -26,12 +26,12 @@ var vsopt volumeServerOption
 func init() {
 	cmdVolume.Run = runVolume // break init cycle
 	vsopt = volumeServerOption{
-		addr:                  cmdVolume.Flag.String("ip", "0.0.0.0:2000", "ip:port"),
-		masters:               cmdVolume.Flag.String("master", "127.0.0.1:10000,", "master hosts"),
-		data:                  cmdVolume.Flag.String("dir", "./data", "data dir"),
-		pulseSeconds:          cmdVolume.Flag.Int("pulseseconds", 5, "number of seconds between heartbeats, must be smaller than or equal to the master's setting"),
-		idleConnectionTimeout: cmdVolume.Flag.Int("idletimeout", 10, "connection idle seconds"),
-		maxCpu:                cmdVolume.Flag.Int("maxcpu", 0, "maximum number of CPUs. 0 means all available CPUs"),
+		addr:         cmdVolume.Flag.String("ip", "0.0.0.0:2000", "ip:port"),
+		mserver:      cmdVolume.Flag.String("mserver", "127.0.0.1:10000,", "master hosts"),
+		data:         cmdVolume.Flag.String("dir", "./data", "data dir"),
+		pulseSeconds: cmdVolume.Flag.Int("pulseseconds", 5, "number of seconds between heartbeats, must be smaller than or equal to the master's setting"),
+		timeout:      cmdVolume.Flag.Int("idletimeout", 10, "connection idle seconds"),
+		maxCpu:       cmdVolume.Flag.Int("maxcpu", 0, "maximum number of CPUs. 0 means all available CPUs"),
 	}
 }
 
@@ -52,9 +52,14 @@ func runVolume(cmd *Command, args []string) bool {
 
 	addr := *vsopt.addr
 	data := *vsopt.data
-	masters := *vsopt.masters
+	mserver := *vsopt.mserver
 	pulseSeconds := *vsopt.pulseSeconds
-	idleConnectionTimeout := *vsopt.idleConnectionTimeout
+	timeout := *vsopt.timeout
+
+	masters := util.StrSplit(mserver, ",")
+	if len(masters) < 1 {
+		glog.Fatalf("Volume server need mserver addr")
+	}
 
 	if err := util.MkdirOrExist(data); err != nil {
 		glog.Fatalf("Check data Folder (-dir) Writable %s : %s", vsopt.data, err)
@@ -63,7 +68,7 @@ func runVolume(cmd *Command, args []string) bool {
 	volumeServer := server.NewVolumeServer(addr, data, masters, router, pulseSeconds)
 
 	glog.V(0).Infoln("Start Rain volume server", util.VERSION, "at", addr)
-	listener, e := util.NewListener(addr, time.Duration(idleConnectionTimeout)*time.Second)
+	listener, e := util.NewListener(addr, time.Duration(timeout)*time.Second)
 	if e != nil {
 		glog.Fatalf("Volume server listener error:%v", e)
 	}
