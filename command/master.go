@@ -114,6 +114,10 @@ func runMaster(cmd *Command, args []string) bool {
 
 	ms.SetMasterServer(router)
 
+	OnInterrupt(func() {
+		ms.Close()
+	})
+
 	glog.V(0).Infoln("Start Seaweed Master", util.VERSION, "at", addr)
 
 	if e := http.Serve(HTTPListener, router); e != nil {
