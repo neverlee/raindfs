@@ -38,7 +38,7 @@ func (ms *MasterServer) SetMasterServer(r *mux.Router) {
 
 	r.HandleFunc("/stats/counter", statsCounterHandler)
 	r.HandleFunc("/stats/memory", statsMemoryHandler)
-	r.HandleFunc("/ping", ms.pingHandler)
+	r.HandleFunc("/ping", ms.pingHandler).Methods("GET")
 
 	ms.Topo.StartRefreshWritableVolumes()
 }
@@ -55,9 +55,7 @@ func (ms *MasterServer) nodeStatusHandler(w http.ResponseWriter, r *http.Request
 }
 
 func (ms *MasterServer) nodeJoinHandler(w http.ResponseWriter, r *http.Request) {
-	//glog.Extraln(">>>>>>", r.RemoteAddr)
 	if blob, err := ioutil.ReadAll(r.Body); err == nil {
-		fmt.Fprint(w, string(blob))
 		var jmsg operation.JoinMessage
 		if jerr := json.Unmarshal(blob, &jmsg); jerr == nil {
 			if strings.HasPrefix(jmsg.Addr, "0.0.0.0") { // strings.HasPrefix(jmsg.Ip, "[::]")
@@ -76,7 +74,6 @@ func (ms *MasterServer) volumeHandler(w http.ResponseWriter, r *http.Request) {
 	if vidstr == "_pick" {
 		vid, nodes, err := ms.Topo.PickForWrite()
 		if err == nil {
-			// key := util.GenID() fid := storage.NewFileId(vid, key)
 			ret := operation.PickResult{
 				Vid:   vid.String(),
 				Nodes: nodes.ToNameList(),

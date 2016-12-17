@@ -13,8 +13,8 @@ type AssignVolumeResult struct {
 }
 
 func AssignVolume(server string, vidstr string) error {
-	uri := fmt.Sprintf("http://%s/admin/assign_volume/%s", server, vidstr)
-	jsonBlob, err := util.Get(uri)
+	uri := fmt.Sprintf("http://%s/vs/vol/%s", server, vidstr)
+	jsonBlob, err := util.Put(uri)
 	if err != nil {
 		return err
 	}

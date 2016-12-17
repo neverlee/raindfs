@@ -101,8 +101,8 @@ func (v *Volume) Close() {
 	v.dump(v.MetaPath())
 }
 
-func (v *Volume) SaveFile(fid *FileId, fsize int, flag byte, r io.Reader) (*Needle, error) {
-	fidstr := strconv.FormatUint(fid.Key, 16)
+func (v *Volume) SaveFile(fid FileId, fsize int, flag byte, r io.Reader) (*Needle, error) {
+	fidstr := fid.String()
 	fpath := path.Join(v.dir, fidstr)
 	needle, err := WriteFile(fpath, fsize, flag, r)
 	if err == nil {
@@ -114,8 +114,8 @@ func (v *Volume) SaveFile(fid *FileId, fsize int, flag byte, r io.Reader) (*Need
 	return needle, err
 }
 
-func (v *Volume) LoadFile(fid *FileId, w http.ResponseWriter) error {
-	fidstr := strconv.FormatUint(fid.Key, 16)
+func (v *Volume) LoadFile(fid FileId, w http.ResponseWriter) error {
+	fidstr := fid.String()
 	fpath := path.Join(v.dir, fidstr)
 	err := ReadFile(fpath, func(n *Needle, r io.Reader) error {
 		w.Header().Set("Content-length", strconv.FormatInt(int64(n.DataSize), 10))
@@ -127,8 +127,8 @@ func (v *Volume) LoadFile(fid *FileId, w http.ResponseWriter) error {
 	return err
 }
 
-func (v *Volume) DeleteFile(fid *FileId) {
-	fidstr := strconv.FormatUint(fid.Key, 16)
+func (v *Volume) DeleteFile(fid FileId) {
+	fidstr := fid.String()
 	fpath := path.Join(v.dir, fidstr)
 	os.Remove(fpath) // TODO async delete, no errro
 }

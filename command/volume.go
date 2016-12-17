@@ -26,7 +26,7 @@ var vsopt volumeServerOption
 func init() {
 	cmdVolume.Run = runVolume // break init cycle
 	vsopt = volumeServerOption{
-		addr:         cmdVolume.Flag.String("ip", "0.0.0.0:2000", "ip:port"),
+		addr:         cmdVolume.Flag.String("addr", "0.0.0.0:20000", "addr to bind"),
 		mserver:      cmdVolume.Flag.String("mserver", "127.0.0.1:10000,", "master hosts"),
 		data:         cmdVolume.Flag.String("dir", "./data", "data dir"),
 		pulseSeconds: cmdVolume.Flag.Int("pulseseconds", 5, "number of seconds between heartbeats, must be smaller than or equal to the master's setting"),
@@ -36,7 +36,7 @@ func init() {
 }
 
 var cmdVolume = &Command{
-	UsageLine: "volume -port=8080 -dir=/tmp -max=5 -ip=server_name -mserver=localhost:9333",
+	UsageLine: "volume -dir=/tmp -mserver=localhost:10000",
 	Short:     "start a volume server",
 	Long: `start a volume server to provide storage spaces
 

@@ -66,6 +66,25 @@ func Get(url string) ([]byte, error) {
 	return b, nil
 }
 
+func Put(url string) ([]byte, error) {
+	req, err := http.NewRequest("PUT", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, e := client.Do(req)
+	if e != nil {
+		return nil, e
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("%s: %s", url, resp.Status)
+	}
+	return body, err
+}
+
+
+
 func Delete(url string) error {
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {

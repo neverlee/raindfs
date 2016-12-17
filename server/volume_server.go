@@ -36,13 +36,14 @@ func NewVolumeServer(addr string, data string, mserver []string, r *mux.Router, 
 
 	go vs.heartBeat()
 	r.HandleFunc("/status", vs.statusHandler)
-	r.HandleFunc("/admin/assign_volume/{vid}", vs.assignVolumeHandler)
-	r.HandleFunc("/admin/delete_volume/{vid}", vs.deleteVolumeHandler)
-	r.HandleFunc("/admin/put/{fid}", vs.putHandler)
-	r.HandleFunc("/admin/get/{fid}", vs.getHandler)
-	r.HandleFunc("/admin/delete/{fid}", vs.deleteHandler)
-	r.HandleFunc("/admin/getvinfo/{vid}", vs.getVolumeInfoHandler)
-	r.HandleFunc("/admin/getvfiles/{vid}", vs.getVolumeFilesHandler)
+	r.HandleFunc("/vs/vol/{vid}", vs.assignVolumeHandler).Methods("PUT")
+	r.HandleFunc("/vs/vol/{vid}", vs.deleteVolumeHandler).Methods("DELETE")
+	r.HandleFunc("/vs/vol/{vid}", vs.getVolumeInfoHandler).Methods("GET")
+	r.HandleFunc("/vs/fs/{vid}/{fid}", vs.putHandler).Methods("PUT")
+	r.HandleFunc("/vs/fs/{vid}/{fid}", vs.deleteHandler).Methods("DELETE")
+	r.HandleFunc("/vs/fs/{vid}/{fid}", vs.getHandler).Methods("GET")
+	r.HandleFunc("/vs/fs/{vid}/{fid}/info", vs.getVolumeFilesHandler).Methods("GET")
+
 	r.HandleFunc("/stats/counter", statsCounterHandler)
 	r.HandleFunc("/stats/memory", statsMemoryHandler)
 	r.HandleFunc("/stats/disk", vs.statsDiskHandler)
@@ -51,7 +52,7 @@ func NewVolumeServer(addr string, data string, mserver []string, r *mux.Router, 
 	return vs
 }
 
-func (v *VolumeServer) assignVolumeHandler(w http.ResponseWriter, r *http.Request) {
+func (vs *VolumeServer) assignVolumeHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	vidstr := vars["vid"]
 	vid, err := storage.NewVolumeId(vidstr)
@@ -59,20 +60,20 @@ func (v *VolumeServer) assignVolumeHandler(w http.ResponseWriter, r *http.Reques
 		writeJsonError(w, r, http.StatusOK, err) // TODO 改为参数错误的状态码400
 	}
 	ret := operation.AssignVolumeResult{}
-	if err = v.store.Location.AddVolume(vid); err != nil { // && err != storage.ErrExistVolume {
+	if err = vs.store.Location.AddVolume(vid); err != nil { // && err != storage.ErrExistVolume {
 		ret.Error = err.Error()
 	}
 	writeJsonQuiet(w, r, http.StatusOK, ret)
 }
 
-func (v *VolumeServer) deleteVolumeHandler(w http.ResponseWriter, r *http.Request) {
+func (vs *VolumeServer) deleteVolumeHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	vidstr := vars["vid"]
 	vid, err := storage.NewVolumeId(vidstr)
 	if err != nil {
 		writeJsonError(w, r, http.StatusOK, err) // TODO 改为参数错误的状态码400
 	}
-	v.store.Location.DeleteVolume(vid)
+	vs.store.Location.DeleteVolume(vid)
 	writeJsonQuiet(w, r, http.StatusOK, true)
 }
 
@@ -93,8 +94,8 @@ func (vs *VolumeServer) statusHandler(w http.ResponseWriter, r *http.Request) {
 
 func (vs *VolumeServer) putHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	fidstr := vars["fid"]
-	fid, err := storage.ParseFileId(fidstr)
+	vidstr, fidstr := vars["vid"], vars["fid"]
+	vid, fid, err := storage.NewVFId(vidstr, fidstr)
 	if err != nil {
 		writeJsonError(w, r, http.StatusBadRequest, err)
 		return
@@ -110,7 +111,7 @@ func (vs *VolumeServer) putHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	volume := vs.store.Location.GetVolume(fid.VolumeId)
+	volume := vs.store.Location.GetVolume(vid)
 	if volume == nil {
 		writeJsonError(w, r, http.StatusNotFound, errors.New("No such volume")) // TODO
 		return
@@ -135,13 +136,13 @@ func (vs *VolumeServer) putHandler(w http.ResponseWriter, r *http.Request) {
 
 func (vs *VolumeServer) getHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	fidstr := vars["fid"]
-	fid, err := storage.ParseFileId(fidstr)
+	vidstr, fidstr := vars["vid"], vars["fid"]
+	vid, fid, err := storage.NewVFId(vidstr, fidstr)
 	if err != nil {
 		writeJsonError(w, r, http.StatusOK, err)
 		return
 	}
-	volume := vs.store.Location.GetVolume(fid.VolumeId)
+	volume := vs.store.Location.GetVolume(vid)
 	if volume == nil {
 		writeJsonError(w, r, http.StatusOK, errors.New("No such volume")) // TODO
 		return
@@ -154,13 +155,13 @@ func (vs *VolumeServer) getHandler(w http.ResponseWriter, r *http.Request) {
 
 func (vs *VolumeServer) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	fidstr := vars["fid"]
-	fid, err := storage.ParseFileId(fidstr)
+	vidstr, fidstr := vars["vid"], vars["fid"]
+	vid, fid, err := storage.NewVFId(vidstr, fidstr)
 	if err != nil {
 		writeJsonError(w, r, http.StatusOK, err)
 		return
 	}
-	volume := vs.store.Location.GetVolume(fid.VolumeId)
+	volume := vs.store.Location.GetVolume(vid)
 	ret := operation.DeleteResult{}
 	if volume == nil {
 		ret.Status = 1
@@ -199,8 +200,8 @@ func (vs *VolumeServer) getVolumeInfoHandler(w http.ResponseWriter, r *http.Requ
 func (vs *VolumeServer) getVolumeFilesHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	vidstr := vars["vid"]
-
 	vid, err := storage.NewVolumeId(vidstr)
+
 	if err != nil {
 		writeJsonError(w, r, http.StatusOK, err) // TODO
 		return

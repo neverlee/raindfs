@@ -1,28 +1,42 @@
 package storage
 
 import (
-	"errors"
-	"fmt"
+	"strconv"
 )
 
-type FileId struct {
-	VolumeId VolumeId
-	Key      uint64
+type FileId uint64
+
+func NewFileId(fidstr string) (FileId, error) {
+	fid, err := strconv.ParseUint(fidstr, 16, 64)
+	return FileId(fid), err
 }
 
-func NewFileId(VolumeId VolumeId, Key uint64) *FileId {
-	return &FileId{VolumeId: VolumeId, Key: Key}
+func (fid FileId) String() string {
+	return strconv.FormatUint(uint64(fid), 16)
 }
 
-func ParseFileId(fid string) (*FileId, error) {
-	var vid VolumeId
-	var key uint64
-	if n, _ := fmt.Sscanf(fid, "%x-%x", &vid, &key); n == 2 {
-		return &FileId{VolumeId: vid, Key: key}, nil
+func (fid FileId) MarshalJSON() ([]byte, error) {
+	s := strconv.FormatUint(uint64(fid), 16)
+	return []byte(s), nil
+}
+func (fid FileId) UnmarshalJSON(raw []byte) error {
+	id, err := strconv.ParseUint(string(raw), 16, 64)
+	if err == nil {
+		fid = FileId(id)
 	}
-	return nil, errors.New("Invalid fid " + fid)
+	return err
 }
 
-func (n *FileId) String() string {
-	return fmt.Sprintf("%x-%x", uint32(n.VolumeId), n.Key)
+func NewVFId(vidstr, fidstr string) (VolumeId, FileId, error) {
+	vid, verr := NewVolumeId(fidstr)
+	if verr != nil {
+		return 0, 0, verr
+	}
+	fid, ferr := NewFileId(fidstr)
+	if ferr != nil {
+		return 0, 0, ferr
+	}
+	return vid, fid, nil
 }
+
+

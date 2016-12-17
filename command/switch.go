@@ -15,9 +15,6 @@ type switchServerOption struct {
 	addr    *string
 	mserver *string
 	timeout *int
-	//pulseSeconds          *int
-	//idleConnectionTimeout *int
-	//maxCpu                *int
 }
 
 var ssopt switchServerOption
@@ -27,7 +24,7 @@ func init() {
 	ssopt = switchServerOption{
 		addr:    cmdSwitch.Flag.String("addr", "0.0.0.0:10100", "switch http server bind addr"),
 		mserver: cmdSwitch.Flag.String("mserver", "", "raindfs masters addr"),
-		timeout: cmdMaster.Flag.Int("idletimeout", 10, "connection idle seconds"),
+		timeout: cmdMaster.Flag.Int("sstimeout", 10, "connection idle seconds"),
 	}
 }
 
@@ -40,10 +37,6 @@ var cmdSwitch = &Command{
 }
 
 func runSwitch(cmd *Command, args []string) bool {
-	//if *ssopt.maxCpu > 0 {
-	//	runtime.GOMAXPROCS(*ssopt.maxCpu)
-	//}
-
 	router := mux.NewRouter()
 
 	addr := *ssopt.addr
