@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"strings"
 
@@ -19,7 +18,6 @@ import (
 type MasterServer struct {
 	Topo *topology.Topology
 
-	listener net.Listener
 	//vgLock sync.Mutex
 	//bounedLeaderChan chan int
 }
@@ -45,7 +43,6 @@ func (ms *MasterServer) SetMasterServer(r *mux.Router) {
 
 func (ms *MasterServer) Close() error {
 	ms.Topo.Raft.Close()
-	ms.listener.Close()
 	return nil
 }
 

@@ -116,6 +116,7 @@ func runMaster(cmd *Command, args []string) bool {
 
 	OnInterrupt(func() {
 		ms.Close()
+		HTTPListener.Close()
 	})
 
 	glog.V(0).Infoln("Start Seaweed Master", util.VERSION, "at", addr)

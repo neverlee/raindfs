@@ -104,7 +104,6 @@ func (rs *RaftServer) Apply(action int, key uint32) (uint32, error) {
 }
 
 func (rs *RaftServer) Close() error {
-	rs.Close()
 	rs.raftTrans.Close()
 	ret := rs.raft.Shutdown()
 	// wait raft shutdown
