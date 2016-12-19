@@ -25,3 +25,16 @@ func PickVolume(server string) (*PickResult, error) {
 	}
 	return &ret, nil
 }
+
+func PickVolumeByID(server, vidstr string) (*PickResult, error) {
+	jsonBlob, err := util.Get("http://" + server + "/ms/vol/" + vidstr)
+	if err != nil {
+		return nil, err
+	}
+	var ret PickResult
+	err = json.Unmarshal(jsonBlob, &ret)
+	if err != nil {
+		return nil, fmt.Errorf("result JSON unmarshal error:%v, json:%s", err, string(jsonBlob))
+	}
+	return &ret, nil
+}

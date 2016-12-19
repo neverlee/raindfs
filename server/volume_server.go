@@ -36,18 +36,19 @@ func NewVolumeServer(addr string, data string, mserver []string, r *mux.Router, 
 
 	go vs.heartBeat()
 	r.HandleFunc("/status", vs.statusHandler)
-	r.HandleFunc("/vs/vol/{vid}", vs.assignVolumeHandler).Methods("PUT")
-	r.HandleFunc("/vs/vol/{vid}", vs.deleteVolumeHandler).Methods("DELETE")
-	r.HandleFunc("/vs/vol/{vid}", vs.getVolumeInfoHandler).Methods("GET")
-	r.HandleFunc("/vs/fs/{vid}/{fid}", vs.putHandler).Methods("PUT")
-	r.HandleFunc("/vs/fs/{vid}/{fid}", vs.deleteHandler).Methods("DELETE")
-	r.HandleFunc("/vs/fs/{vid}/{fid}", vs.getHandler).Methods("GET")
-	r.HandleFunc("/vs/fs/{vid}/{fid}/info", vs.getVolumeFilesHandler).Methods("GET")
+	r.HandleFunc("/vs/vol/{vid:[0-9a-fA-F]+}", vs.assignVolumeHandler).Methods("PUT")
+	r.HandleFunc("/vs/vol/{vid:[0-9a-fA-F]+}", vs.deleteVolumeHandler).Methods("DELETE")
+	r.HandleFunc("/vs/vol/{vid:[0-9a-fA-F]+}", vs.getVolumeInfoHandler).Methods("GET")
+	r.HandleFunc("/vs/fs/{vid:[0-9a-fA-F]+}/{fid:[0-9a-fA-F]+}", vs.putHandler).Methods("PUT")
+	r.HandleFunc("/vs/fs/{vid:[0-9a-fA-F]+}/{fid:[0-9a-fA-F]+}", vs.deleteHandler).Methods("DELETE")
+	r.HandleFunc("/vs/fs/{vid:[0-9a-fA-F]+}/{fid:[0-9a-fA-F]+}", vs.getHandler).Methods("GET")
+	r.HandleFunc("/vs/fs/{vid:[0-9a-fA-F]+}/{fid:[0-9a-fA-F]+}/info", vs.getVolumeFilesHandler).Methods("GET")
 
 	r.HandleFunc("/stats/counter", statsCounterHandler)
 	r.HandleFunc("/stats/memory", statsMemoryHandler)
 	r.HandleFunc("/stats/disk", vs.statsDiskHandler)
 	r.HandleFunc("/ping", vs.pingHandler)
+	r.HandleFunc("/test", vs.testHandler)
 
 	return vs
 }
@@ -125,6 +126,7 @@ func (vs *VolumeServer) putHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	if err == nil {
 		ret := operation.UploadBlockResult{
+			Vid:   vidstr,
 			Fid:   fidstr,
 			Crc32: uint32(needle.Checksum),
 		}
@@ -265,6 +267,10 @@ func (vs *VolumeServer) Shutdown() {
 	glog.V(0).Infoln("Shut down successfully!")
 }
 
-func (v *VolumeServer) pingHandler(w http.ResponseWriter, r *http.Request) {
+func (vs *VolumeServer) pingHandler(w http.ResponseWriter, r *http.Request) {
 	writeJsonQuiet(w, r, http.StatusOK, "ping")
+}
+
+func (vs *VolumeServer) testHandler(w http.ResponseWriter, r *http.Request) {
+	writeJsonQuiet(w, r, http.StatusOK, vs.store.Status())
 }

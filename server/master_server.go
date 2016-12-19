@@ -24,13 +24,14 @@ type MasterServer struct {
 
 func NewMasterServer(raft *raftlayer.RaftServer, pulse int) *MasterServer {
 	ms := &MasterServer{}
-	ms.Topo = topology.NewTopology(raft, pulse) //  TODO fix seq
+	ms.Topo = topology.NewTopology(raft, pulse)
 
 	return ms
 }
 
 func (ms *MasterServer) SetMasterServer(r *mux.Router) {
-	r.HandleFunc("/ms/vol/{vid}", ms.volumeHandler)
+	r.HandleFunc("/ms/vol/_pick", ms.pickVolumeHandler)
+	r.HandleFunc("/ms/vol/{vid:[0-9a-fA-F]+}", ms.volumeHandler)
 	r.HandleFunc("/ms/node/join", ms.nodeJoinHandler)
 	r.HandleFunc("/ms/node/status", ms.nodeStatusHandler)
 
@@ -68,37 +69,38 @@ func (ms *MasterServer) nodeJoinHandler(w http.ResponseWriter, r *http.Request) 
 func (ms *MasterServer) volumeHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	vidstr := vars["vid"]
-	if vidstr == "_pick" {
-		vid, nodes, err := ms.Topo.PickForWrite()
-		if err == nil {
-			ret := operation.PickResult{
-				Vid:   vid.String(),
-				Nodes: nodes.ToNameList(),
-			}
-			writeJsonQuiet(w, r, http.StatusOK, ret)
-		} else {
-			writeJsonError(w, r, http.StatusOK, err)
+	if vid, err := storage.NewVolumeId(vidstr); err == nil {
+		dns := ms.Topo.Lookup(vid)
+		nodes := make([]string, len(dns))
+		for i, dn := range dns {
+			nodes[i] = dn.Url()
 		}
+		ret := operation.PickResult{
+			Vid:   vid.String(),
+			Nodes: nodes,
+		}
+		writeJsonQuiet(w, r, http.StatusOK, ret)
 	} else {
-		if vid, err := storage.NewVolumeId(vidstr); err == nil {
-			dns := ms.Topo.Lookup(vid)
-			nodes := make([]string, len(dns))
-			for i, dn := range dns {
-				nodes[i] = dn.Url()
-			}
-			ret := operation.PickResult{
-				Vid:   vid.String(),
-				Nodes: nodes,
-			}
-			writeJsonQuiet(w, r, http.StatusOK, ret)
-		} else {
-			writeJsonError(w, r, http.StatusOK, err)
-		}
+		writeJsonError(w, r, http.StatusOK, err)
 	}
 }
 
+func (ms *MasterServer) pickVolumeHandler(w http.ResponseWriter, r *http.Request) {
+	vid, nodes, err := ms.Topo.PickForWrite()
+	if err == nil {
+		ret := operation.PickResult{
+			Vid:   vid.String(),
+			Nodes: nodes.ToNameList(),
+		}
+		writeJsonQuiet(w, r, http.StatusOK, ret)
+	} else {
+		writeJsonError(w, r, http.StatusOK, err)
+	}
+}
+
+
+
 func (ms *MasterServer) pingHandler(w http.ResponseWriter, r *http.Request) {
-	ret := ms.Topo.ToData()
-	writeJsonQuiet(w, r, http.StatusOK, ret)
-	//writeJsonQuiet(w, r, http.StatusOK, "ping")
+	//writeJsonQuiet(w, r, http.StatusOK, ms.Topo.ToData())
+	writeJsonQuiet(w, r, http.StatusOK, "ping")
 }

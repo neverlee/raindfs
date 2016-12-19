@@ -56,6 +56,7 @@ func (l *DiskLocation) loadExistingVolumes() {
 func (l *DiskLocation) GetVolume(vid VolumeId) *Volume {
 	l.mutex.Lock()
 	l.mutex.Unlock()
+	glog.Extraln(">>>>>>>>>", vid)
 	if v, ok := l.volumes[vid]; ok {
 		return v
 	}
@@ -91,6 +92,7 @@ func (l *DiskLocation) DeleteVolume(vid VolumeId) {
 	l.mutex.Lock()
 	l.mutex.Unlock()
 	v, ok := l.volumes[vid]
+
 	if !ok {
 		return
 	}

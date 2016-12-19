@@ -2,9 +2,17 @@ package storage
 
 import (
 	"strconv"
+	"encoding/binary"
+
+	"github.com/satori/go.uuid"
 )
 
 type FileId uint64
+
+func GenFileId() FileId {
+	key := binary.LittleEndian.Uint64(uuid.NewV4().Bytes())
+	return FileId(key)
+}
 
 func NewFileId(fidstr string) (FileId, error) {
 	fid, err := strconv.ParseUint(fidstr, 16, 64)
@@ -28,7 +36,7 @@ func (fid FileId) UnmarshalJSON(raw []byte) error {
 }
 
 func NewVFId(vidstr, fidstr string) (VolumeId, FileId, error) {
-	vid, verr := NewVolumeId(fidstr)
+	vid, verr := NewVolumeId(vidstr)
 	if verr != nil {
 		return 0, 0, verr
 	}

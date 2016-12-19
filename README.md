@@ -13,6 +13,9 @@ A distributed file system
 
 ./raindfs switch -mserver 127.0.0.1:10000 &
 
+curl -XPUT 'http://127.0.0.1:10100/ss/fs/_put' --data-raw "@rain.go"
+curl -XGET 'http://127.0.0.1:10100/ss/fs/0/9b4db7025ffd6508'
+
 pkill raindfs
 ```
 

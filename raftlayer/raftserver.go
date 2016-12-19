@@ -59,7 +59,7 @@ func NewRaftServer(listener net.Listener, addr string, clusters []string, metaFo
 	fsm := NewFSM()
 
 	// setup raft
-	raft, err := NewRaft(metaFolder, fsm, trans, clusters, time.Second, 5)
+	raft, err := NewRaft(metaFolder, fsm, trans, clusters, 10*time.Second, 10)
 	if err != nil {
 		return nil
 	}
@@ -81,7 +81,7 @@ func (rs *RaftServer) Peers() []string {
 }
 
 func (rs *RaftServer) IsLeader() bool {
-	return rs.raft.State() != raft.Leader
+	return rs.raft.State() == raft.Leader
 }
 
 func (rs *RaftServer) GetVid() uint32 {

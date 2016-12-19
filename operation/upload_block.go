@@ -9,12 +9,13 @@ import (
 )
 
 type UploadBlockResult struct {
+	Vid   string `json:"vid,omitempty"`
 	Fid   string `json:"fid,omitempty"`
 	Crc32 uint32 `json:"crc32,omitempty"`
 	Error string `json:"error,omitempty"`
 }
 
-func PostFile(uri string, fidstr string, fsize int, index bool, r io.Reader, ret chan<- UploadBlockResult) (reterr error) {
+func PutFile(vserver string, vidstr, fidstr string, fsize int, index bool, r io.Reader, ret chan<- UploadBlockResult) (reterr error) {
 	var ubret UploadBlockResult
 	defer func() {
 		if reterr != nil {
@@ -25,9 +26,10 @@ func PostFile(uri string, fidstr string, fsize int, index bool, r io.Reader, ret
 		ret <- ubret
 	}()
 
-	url := fmt.Sprintf("http://%s/admin/put/%s?filesize=%d&index=%v", uri, fidstr, fsize, index)
+	url := fmt.Sprintf("http://%s/vs/fs/%s/%s?filesize=%d&index=%v", vserver, vidstr, fidstr, fsize, index)
+	
 	//req.Header.Set("Content-Length", strconv.Itoa(fsize))
-	req, err := http.NewRequest("POST", url, r)
+	req, err := http.NewRequest("PUT", url, r)
 	if err != nil {
 		return err
 	}
