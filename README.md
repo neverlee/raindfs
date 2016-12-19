@@ -30,10 +30,6 @@ pkill raindfs
 * /stats/counter
 * /stats/memory
 
-rain master
-rain volume
-rain server
-
 ## MasterServer
 ### 原始api
 * /ms/node/join             post 心路node加入
@@ -44,6 +40,7 @@ rain server
 ### 开放api
 
 ## VolumeSeraer
+### 原始api
 * /vs/vol/{vid}             get  vid信息
 * /vs/vol/{vid}             put  分配vid
 * /vs/vol/{vid}             del  删除vid
