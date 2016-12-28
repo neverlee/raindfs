@@ -31,7 +31,7 @@ func (l *DiskLocation) Directory() string {
 
 func (l *DiskLocation) loadExistingVolumes() {
 	l.mutex.Lock()
-	l.mutex.Unlock()
+	defer l.mutex.Unlock()
 	if dirs, err := ioutil.ReadDir(l.directory); err == nil {
 		for _, dir := range dirs {
 			name := dir.Name()
@@ -55,7 +55,7 @@ func (l *DiskLocation) loadExistingVolumes() {
 
 func (l *DiskLocation) GetVolume(vid VolumeId) *Volume {
 	l.mutex.Lock()
-	l.mutex.Unlock()
+	defer l.mutex.Unlock()
 	glog.Extraln(">>>>>>>>>", vid)
 	if v, ok := l.volumes[vid]; ok {
 		return v
@@ -65,7 +65,7 @@ func (l *DiskLocation) GetVolume(vid VolumeId) *Volume {
 
 func (l *DiskLocation) GetAllVolume() []*Volume {
 	l.mutex.Lock()
-	l.mutex.Unlock()
+	defer l.mutex.Unlock()
 	ret := make([]*Volume, len(l.volumes))
 	i := 0
 	for _, v := range l.volumes {
@@ -77,7 +77,7 @@ func (l *DiskLocation) GetAllVolume() []*Volume {
 
 func (l *DiskLocation) AddVolume(vid VolumeId) error {
 	l.mutex.Lock()
-	l.mutex.Unlock()
+	defer l.mutex.Unlock()
 	if _, ok := l.volumes[vid]; ok {
 		return ErrExistVolume
 	}
@@ -90,7 +90,7 @@ func (l *DiskLocation) AddVolume(vid VolumeId) error {
 
 func (l *DiskLocation) DeleteVolume(vid VolumeId) {
 	l.mutex.Lock()
-	l.mutex.Unlock()
+	defer l.mutex.Unlock()
 	v, ok := l.volumes[vid]
 
 	if !ok {
@@ -102,7 +102,7 @@ func (l *DiskLocation) DeleteVolume(vid VolumeId) {
 
 func (l *DiskLocation) ToMap() []*VolumeInfo {
 	l.mutex.Lock()
-	l.mutex.Unlock()
+	defer l.mutex.Unlock()
 	stats := make([]*VolumeInfo, len(l.volumes))
 	i := 0
 	for _, v := range l.volumes {
